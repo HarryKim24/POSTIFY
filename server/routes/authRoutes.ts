@@ -3,6 +3,7 @@ import { Router, Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import User, { IUser } from '../models/User';
+import authenticate from '../middleware/authMiddleware';
 
 const router = Router();
 
@@ -97,6 +98,21 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
     });
   } catch (error: any) {
     console.error('로그인 에러:', error);
+    res.status(500).json({ error: '서버 에러', message: error.message });
+  }
+});
+
+router.get('/me', authenticate, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const user = await User.findById((req as any).userId).select('-password'); // 비밀번호 제외
+    if (!user) {
+      res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
+      return;
+    }
+
+    res.status(200).json({ user });
+  } catch (error: any) {
+    console.error('사용자 정보 조회 에러:', error);
     res.status(500).json({ error: '서버 에러', message: error.message });
   }
 });
