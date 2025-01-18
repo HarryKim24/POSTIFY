@@ -1,11 +1,31 @@
 // server/routes/authRoutes.ts
 import { Router, Request, Response } from 'express';
+import { AuthRequest } from '../middleware/authMiddleware';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import User, { IUser } from '../models/User';
+import RefreshToken, { IRefreshToken } from '../models/RefreshToken';
 import authenticate from '../middleware/authMiddleware';
+import { Types } from 'mongoose';
 
 const router = Router();
+
+const generateRefreshToken = async (userId: string): Promise<string> => {
+  const refreshToken = jwt.sign(
+    { userId },
+    process.env.REFRESH_TOKEN_SECRET as string,
+    { expiresIn: '7d' }
+  );
+
+  const tokenDoc: IRefreshToken = new RefreshToken({
+    token: refreshToken,
+    user: new Types.ObjectId(userId),
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+  });
+
+  await tokenDoc.save();
+  return refreshToken;
+};
 
 router.post('/register', async (req: Request, res: Response): Promise<void> => {
   try {
@@ -16,13 +36,13 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const existingUser = await User.findOne({ email });
+    const existingUser: IUser | null = await User.findOne({ email });
     if (existingUser) {
       res.status(400).json({ error: '이미 사용 중인 이메일입니다.' });
       return;
     }
 
-    const existingUsername = await User.findOne({ username });
+    const existingUsername: IUser | null = await User.findOne({ username });
     if (existingUsername) {
       res.status(400).json({ error: '이미 사용 중인 사용자 이름입니다.' });
       return;
@@ -40,7 +60,7 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
     await newUser.save();
 
     const token = jwt.sign(
-      { userId: newUser._id },
+      { userId: newUser._id.toString() }, 
       process.env.JWT_SECRET as string,
       { expiresIn: '1h' }
     );
@@ -49,7 +69,7 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
       message: '회원가입 성공',
       token,
       user: {
-        id: newUser._id,
+        id: newUser._id.toString(), 
         username: newUser.username,
         email: newUser.email,
       },
@@ -69,7 +89,7 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const user = await User.findOne({ email });
+    const user: IUser | null = await User.findOne({ email });
     if (!user) {
       res.status(400).json({ error: '이메일 또는 비밀번호가 일치하지 않습니다.' });
       return;
@@ -81,17 +101,20 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const token = jwt.sign(
-      { userId: user._id },
+    const accessToken = jwt.sign(
+      { userId: user._id.toString() },
       process.env.JWT_SECRET as string,
-      { expiresIn: '1h' }
+      { expiresIn: '15m' }
     );
+
+    const refreshToken = await generateRefreshToken(user._id.toString());
 
     res.status(200).json({
       message: '로그인 성공',
-      token,
+      accessToken,
+      refreshToken,
       user: {
-        id: user._id,
+        id: user._id.toString(),
         username: user.username,
         email: user.email,
       },
@@ -102,9 +125,83 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-router.get('/me', authenticate, async (req: Request, res: Response): Promise<void> => {
+router.post('/refresh-token', async (req: Request, res: Response): Promise<void> => {
   try {
-    const user = await User.findById((req as any).userId).select('-password'); // 비밀번호 제외
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      res.status(400).json({ error: 'Refresh Token이 필요합니다.' });
+      return;
+    }
+
+    const existingToken: IRefreshToken | null = await RefreshToken.findOne({ token: refreshToken });
+    if (!existingToken) {
+      res.status(403).json({ error: '유효하지 않은 Refresh Token입니다.' });
+      return;
+    }
+
+    if (existingToken.expiresAt < new Date()) {
+      await RefreshToken.deleteOne({ token: refreshToken });
+      res.status(403).json({ error: 'Refresh Token이 만료되었습니다.' });
+      return;
+    }
+
+    let decoded: any;
+    try {
+      decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET as string);
+    } catch (error) {
+      res.status(403).json({ error: '유효하지 않은 Refresh Token입니다.' });
+      return;
+    }
+
+    const userId: string = decoded.userId;
+
+    const newAccessToken = jwt.sign(
+      { userId },
+      process.env.JWT_SECRET as string,
+      { expiresIn: '15m' }
+    );
+
+    res.status(200).json({
+      accessToken: newAccessToken,
+    });
+  } catch (error: any) {
+    console.error('Refresh Token 에러:', error);
+    res.status(500).json({ error: '서버 에러', message: error.message });
+  }
+});
+
+router.post('/logout', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      res.status(400).json({ error: 'Refresh Token이 필요합니다.' });
+      return;
+    }
+
+    const deletedToken: IRefreshToken | null = await RefreshToken.findOneAndDelete({ token: refreshToken });
+
+    if (!deletedToken) {
+      res.status(403).json({ error: '유효하지 않은 Refresh Token입니다.' });
+      return;
+    }
+
+    res.status(200).json({ message: '로그아웃 성공' });
+  } catch (error: any) {
+    console.error('로그아웃 에러:', error);
+    res.status(500).json({ error: '서버 에러', message: error.message });
+  }
+});
+
+router.get('/me', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (!req.userId) {
+      res.status(401).json({ error: '인증되지 않은 사용자입니다.' });
+      return;
+    }
+
+    const user: IUser | null = await User.findById(req.userId).select('-password');
     if (!user) {
       res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
       return;

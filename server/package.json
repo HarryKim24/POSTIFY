@@ -11,6 +11,7 @@
   "type": "commonjs",
   "description": "",
   "dependencies": {
+    "@types/mongoose": "^5.11.96",
     "bcrypt": "^5.0.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
