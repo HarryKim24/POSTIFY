@@ -161,6 +161,52 @@ router.post('/reset-password/:token', async (req: Request, res: Response): Promi
   }
 });
 
+router.put('/change-password', authenticate, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as any).userId;
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      res.status(400).json({ error: '현재 비밀번호와 새 비밀번호를 입력해주세요.' });
+      return;
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
+      return;
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      res.status(400).json({ error: '현재 비밀번호가 올바르지 않습니다.' });
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      res.status(400).json({ error: '비밀번호는 최소 8자 이상이어야 합니다.' });
+      return;
+    }
+
+    const isSamePassword = await bcrypt.compare(newPassword, user.password);
+    if (isSamePassword) {
+      res.status(400).json({ error: '새 비밀번호는 현재 비밀번호와 다르게 설정해야 합니다.' });
+      return;
+    }
+
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+    user.password = hashedPassword;
+
+    await user.save();
+
+    res.status(200).json({ message: '비밀번호가 성공적으로 변경되었습니다.' });
+  } catch (error: any) {
+    console.error('비밀번호 변경 에러:', error);
+    res.status(500).json({ error: '서버 에러', message: error.message });
+  }
+});
+
 router.post('/login', async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, password } = req.body;
