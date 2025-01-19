@@ -275,6 +275,41 @@ router.post('/logout', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
+router.put('/profile', authenticate, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as any).userId;
+    const { username, email } = req.body;
+
+    if (!username || !email) {
+      res.status(400).json({ error: '사용자 이름과 이메일은 필수 입력 항목입니다.' });
+      return;
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
+      return;
+    }
+
+    user.username = username;
+    user.email = email;
+
+    await user.save();
+
+    res.status(200).json({
+      message: '프로필이 성공적으로 업데이트되었습니다.',
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+      },
+    });
+  } catch (error: any) {
+    console.error('프로필 업데이트 에러:', error);
+    res.status(500).json({ error: '서버 에러', message: error.message });
+  }
+});
+
 router.get('/me', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     if (!req.userId) {
