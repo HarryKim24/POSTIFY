@@ -1,12 +1,14 @@
 // server/routes/authRoutes.ts
 import { Router, Request, Response } from 'express';
-import { AuthRequest } from '../middleware/authMiddleware';
-import bcrypt from 'bcrypt';
+import { Types } from 'mongoose';
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcrypt';
+import crypto from 'crypto';
+import { AuthRequest } from '../middleware/authMiddleware';
+import authenticate from '../middleware/authMiddleware';
 import User, { IUser } from '../models/User';
 import RefreshToken, { IRefreshToken } from '../models/RefreshToken';
-import authenticate from '../middleware/authMiddleware';
-import { Types } from 'mongoose';
+import ResetToken from '../models/ResetToken';
 
 const router = Router();
 
@@ -24,7 +26,7 @@ const generateRefreshToken = async (userId: string): Promise<string> => {
   });
 
   await tokenDoc.save();
-  return refreshToken;
+  return refreshToken;{}
 };
 
 router.post('/register', async (req: Request, res: Response): Promise<void> => {
@@ -76,6 +78,85 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
     });
   } catch (error: any) {
     console.error('회원가입 에러:', error);
+    res.status(500).json({ error: '서버 에러', message: error.message });
+  }
+});
+
+router.post('/forgot-password', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      res.status(400).json({ error: '이메일을 입력해주세요.' });
+      return;
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      res.status(400).json({ error: '해당 이메일을 사용하는 사용자가 없습니다.' });
+      return;
+    }
+
+    await ResetToken.deleteMany({ user: user._id });
+
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+
+    await ResetToken.create({
+      token: hashedToken,
+      user: user._id,
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+    });
+
+    res.status(200).json({
+      message: '비밀번호 재설정 토큰이 생성되었습니다.',
+      resetToken,
+    });
+  } catch (error: any) {
+    console.error('비밀번호 재설정 요청 에러:', error);
+    res.status(500).json({ error: '서버 에러', message: error.message });
+  }
+});
+
+router.post('/reset-password/:token', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { token } = req.params;
+    const { newPassword } = req.body;
+
+    if (!newPassword) {
+      res.status(400).json({ error: '새 비밀번호를 입력해주세요.' });
+      return;
+    }
+
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    const resetToken = await ResetToken.findOne({
+      token: hashedToken,
+      expiresAt: { $gt: new Date() },
+    });
+
+    if (!resetToken) {
+      res.status(400).json({ error: '유효하지 않은 또는 만료된 토큰입니다.' });
+      return;
+    }
+
+    const user = await User.findById(resetToken.user);
+    if (!user) {
+      res.status(400).json({ error: '사용자를 찾을 수 없습니다.' });
+      return;
+    }
+
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+
+    user.password = hashedPassword;
+    await user.save();
+
+    await ResetToken.deleteOne({ token: hashedToken });
+
+    res.status(200).json({ message: '비밀번호가 성공적으로 재설정되었습니다.' });
+  } catch (error: any) {
+    console.error('비밀번호 재설정 에러:', error);
     res.status(500).json({ error: '서버 에러', message: error.message });
   }
 });
