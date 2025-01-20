@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -8,11 +7,14 @@ interface User {
   id: string;
   username: string;
   email: string;
+  profileImage?: string | null;
 }
 
 const ProfilePage = () => {
   const [user, setUser] = useState<User | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [profileImage, setProfileImage] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -27,6 +29,9 @@ const ProfilePage = () => {
       try {
         const response = await API.get('/auth/me');
         setUser(response.data.user);
+        if (response.data.user.profileImage) {
+          setPreview(`http://localhost:3000${response.data.user.profileImage}`);
+        }
       } catch (error: any) {
         setMessage(error.response?.data?.error || '사용자 정보를 가져올 수 없습니다.');
         console.error(error.response?.data);
@@ -45,14 +50,65 @@ const ProfilePage = () => {
     if (!window.confirm('정말로 계정을 삭제하시겠습니까?')) {
       return;
     }
-  
+
     try {
-      const response = await API.delete('/auth/delete-account');
+      await API.delete('/auth/delete-account');
       alert('계정이 성공적으로 삭제되었습니다.');
       localStorage.removeItem('token');
       navigate('/register');
     } catch (error: any) {
       alert(error.response?.data?.error || '계정을 삭제하지 못했습니다.');
+      console.error(error.response?.data);
+    }
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    setProfileImage(file);
+    if (file) {
+      setPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleImageUpload = async () => {
+    if (!profileImage) {
+      alert('이미지를 선택해주세요.');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('image', profileImage);
+
+    try {
+      const response = await API.post('/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      const imageUrl = response.data.imageUrl;
+
+      await API.put('/auth/me', { profileImage: imageUrl });
+      alert('프로필 이미지가 성공적으로 업데이트되었습니다.');
+      setUser((prev) => (prev ? { ...prev, profileImage: imageUrl } : prev));
+    } catch (error: any) {
+      alert(error.response?.data?.error || '이미지 업로드 중 문제가 발생했습니다.');
+      console.error(error.response?.data);
+    }
+  };
+
+  const handleDeleteImage = async () => {
+    if (!window.confirm('정말로 프로필 이미지를 삭제하시겠습니까?')) {
+      return;
+    }
+  
+    try {
+      await API.put('/auth/me/remove-profile-image');
+      alert('프로필 이미지가 성공적으로 삭제되었습니다.');
+      setUser((prev) => (prev ? { ...prev, profileImage: null } : prev));
+      setPreview(null);
+    } catch (error: any) {
+      alert(error.response?.data?.error || '이미지 삭제 중 문제가 발생했습니다.');
       console.error(error.response?.data);
     }
   };
@@ -65,9 +121,19 @@ const ProfilePage = () => {
         <div>
           <p><strong>사용자 이름:</strong> {user.username}</p>
           <p><strong>이메일:</strong> {user.email}</p>
+          {preview && <img src={preview} alt="프로필 미리보기" style={{ maxWidth: '150px', borderRadius: '50%' }} />}
+          <div>
+            <input type="file" accept="image/*" onChange={handleImageChange} />
+            <button onClick={handleImageUpload}>이미지 업로드</button>
+            {user.profileImage && (
+              <button onClick={handleDeleteImage} style={{ marginLeft: '10px', color: 'red' }}>
+                이미지 삭제
+              </button>
+            )}
+          </div>
           <button onClick={handleLogout}>로그아웃</button>
           <button onClick={handleDeleteAccount} style={{ color: 'red' }}>
-          회원 탈퇴
+            회원 탈퇴
           </button>
         </div>
       ) : (
