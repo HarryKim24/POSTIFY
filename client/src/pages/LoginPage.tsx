@@ -20,16 +20,19 @@ const LoginPage = () => {
     e.preventDefault();
     try {
       const response = await API.post('/auth/login', formData);
-      localStorage.setItem('token', response.data.accessToken); 
+
+      localStorage.setItem('token', response.data.accessToken);
+      localStorage.setItem('userId', response.data.user.id);
+
       setMessage('로그인에 성공했습니다!');
-      console.log(response.data);
+      console.log('로그인 성공:', response.data);
 
       setTimeout(() => {
         navigate('/profile');
       }, 1000);
     } catch (error: any) {
       setMessage(error.response?.data?.error || '로그인에 실패했습니다.');
-      console.error(error.response?.data);
+      console.error('로그인 에러:', error.response?.data);
     }
   };
 

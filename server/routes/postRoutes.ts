@@ -98,6 +98,7 @@ router.put('/:postId', authenticate, async (req: Request, res: Response) => {
 
   try {
     const post = await Post.findById(postId);
+
     if (!post) {
       return res.status(404).json({ error: '게시글을 찾을 수 없습니다.' });
     }
@@ -115,12 +116,14 @@ router.put('/:postId', authenticate, async (req: Request, res: Response) => {
     res.status(200).json({ message: '게시글 수정 완료', post });
   } catch (error: any) {
     console.error('게시글 수정 에러:', error);
+
     res.status(500).json({
       error: '서버 에러',
       message: process.env.NODE_ENV === 'development' ? error.message : '문제가 발생했습니다. 다시 시도해주세요.',
     });
   }
 });
+
 
 router.delete('/:postId', authenticate, async (req: Request, res: Response) => {
   const { postId } = req.params;
