@@ -58,9 +58,21 @@ const PostDetailPage = () => {
       {message && <p style={{ color: message.includes('성공') ? 'green' : 'red' }}>{message}</p>}
       <h2>{post.title}</h2>
       <p>{post.content}</p>
-      {post.imageUrl && (
-        <img src={post.imageUrl} alt={post.title} style={{ maxWidth: '100%' }} />
-      )}
+      <img
+        src={
+          post.imageUrl.startsWith('http') 
+            ? post.imageUrl
+            : `http://localhost:3000${post.imageUrl}`
+        }
+        alt={post.title}
+        style={{
+          maxWidth: '300px',
+          maxHeight: '300px',
+          objectFit: 'cover',
+        }}
+      />
+
+
       <p>작성자: {post.user?.username || '알 수 없음'}</p>
 
       {post.user?._id === currentUserId && (
