@@ -69,6 +69,26 @@ router.get('/', async (req: Request, res: Response) => {
   }
 });
 
+router.get('/:postId', async (req: Request, res: Response) => {
+  const { postId } = req.params;
 
+  try {
+    const post = await Post.findById(postId).populate('user', 'username');
+    if (!post) {
+      return res.status(404).json({ error: '게시글을 찾을 수 없습니다.' });
+    }
+
+    res.status(200).json(post);
+  } catch (error) {
+    console.error('게시글 상세 조회 에러:', error);
+
+    const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
+
+    res.status(500).json({
+      error: '서버 에러',
+      message: process.env.NODE_ENV === 'development' ? errorMessage : '문제가 발생했습니다. 다시 시도해주세요.',
+    });
+  }
+});
 
 export default router;
