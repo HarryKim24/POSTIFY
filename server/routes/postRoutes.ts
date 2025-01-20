@@ -122,4 +122,37 @@ router.put('/:postId', authenticate, async (req: Request, res: Response) => {
   }
 });
 
+router.delete('/:postId', authenticate, async (req: Request, res: Response) => {
+  const { postId } = req.params;
+  const userId = (req as any).userId;
+
+  try {
+    const post = await Post.findById(postId);
+
+    if (!post) {
+      return res.status(404).json({ error: '게시글을 찾을 수 없습니다.' });
+    }
+
+    if (post.user.toString() !== userId) {
+      return res.status(403).json({ error: '게시글을 삭제할 권한이 없습니다.' });
+    }
+
+    await Post.findByIdAndDelete(postId);
+
+    res.status(200).json({ message: '게시글이 삭제되었습니다.' });
+  } catch (error) {
+    console.error('게시글 삭제 에러:', error);
+
+    const errorMessage =
+      error instanceof Error
+        ? error.message
+        : '문제가 발생했습니다. 다시 시도해주세요.';
+
+    res.status(500).json({
+      error: '서버 에러',
+      message: process.env.NODE_ENV === 'development' ? errorMessage : '문제가 발생했습니다. 다시 시도해주세요.',
+    });
+  }
+});
+
 export default router;
