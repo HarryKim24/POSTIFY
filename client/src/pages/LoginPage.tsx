@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../stores/useAuthStore';
 import API from '../utils/api';
 
 const LoginPage = () => {
@@ -10,6 +11,7 @@ const LoginPage = () => {
   });
   const [message, setMessage] = useState<string | null>(null);
   const navigate = useNavigate();
+  const login = useAuthStore((state) => state.login);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -20,19 +22,16 @@ const LoginPage = () => {
     e.preventDefault();
     try {
       const response = await API.post('/auth/login', formData);
-
       localStorage.setItem('token', response.data.accessToken);
       localStorage.setItem('userId', response.data.user.id);
-
+      login();
       setMessage('로그인에 성공했습니다!');
-      console.log('로그인 성공:', response.data);
-
       setTimeout(() => {
-        navigate('/profile');
+        navigate('/');
       }, 1000);
     } catch (error: any) {
-      setMessage(error.response?.data?.error || '로그인에 실패했습니다.');
-      console.error('로그인 에러:', error.response?.data);
+      const errorMessage = error.response?.data?.error || '로그인에 실패했습니다.';
+      setMessage(errorMessage);
     }
   };
 
