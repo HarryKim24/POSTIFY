@@ -91,4 +91,35 @@ router.get('/:postId', async (req: Request, res: Response) => {
   }
 });
 
+router.put('/:postId', authenticate, async (req: Request, res: Response) => {
+  const { postId } = req.params;
+  const { title, content, imageUrl } = req.body;
+  const userId = (req as any).userId;
+
+  try {
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.status(404).json({ error: '게시글을 찾을 수 없습니다.' });
+    }
+
+    if (post.user.toString() !== userId) {
+      return res.status(403).json({ error: '수정 권한이 없습니다.' });
+    }
+
+    if (title) post.title = title;
+    if (content) post.content = content;
+    if (imageUrl) post.imageUrl = imageUrl;
+
+    await post.save();
+
+    res.status(200).json({ message: '게시글 수정 완료', post });
+  } catch (error: any) {
+    console.error('게시글 수정 에러:', error);
+    res.status(500).json({
+      error: '서버 에러',
+      message: process.env.NODE_ENV === 'development' ? error.message : '문제가 발생했습니다. 다시 시도해주세요.',
+    });
+  }
+});
+
 export default router;
