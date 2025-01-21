@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import { Router, Request, Response } from 'express';
 import Post, { IPost } from '../models/Post';
+import Comment from '../models/Comment';
 import authenticate, { AuthRequest } from '../middleware/authMiddleware';
 
 const router = Router();
@@ -141,9 +142,11 @@ router.delete('/:postId', authenticate, async (req: Request, res: Response) => {
       return res.status(403).json({ error: '게시글을 삭제할 권한이 없습니다.' });
     }
 
+    await Comment.deleteMany({ post: postId });
+
     await Post.findByIdAndDelete(postId);
 
-    res.status(200).json({ message: '게시글이 삭제되었습니다.' });
+    res.status(200).json({ message: '게시글과 관련된 댓글들이 모두 삭제되었습니다.' });
   } catch (error) {
     console.error('게시글 삭제 에러:', error);
 
