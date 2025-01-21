@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import authRoutes from './routes/authRoutes'; 
 import postRoutes from './routes/postRoutes';
-// import commentRoutes from './routes/commentRoutes';
+import commentRoutes from './routes/commentRoutes';
 import uploadRoutes from './routes/uploadRoutes'; 
 import path from 'path';
 
@@ -37,7 +37,7 @@ mongoose
 
 app.use('/api/auth', authRoutes);
 app.use('/api/posts', postRoutes);
-// app.use('/api/comments', commentRoutes);
+app.use('/api/comments', commentRoutes);
 app.use('/api/upload', uploadRoutes);
 
 app.get('/', (req, res) => {

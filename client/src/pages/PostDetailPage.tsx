@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import API from '../utils/api';
+import CommentList from '../components/CommentList';
 
 const PostDetailPage = () => {
   const { postId } = useParams<{ postId: string }>();
@@ -71,8 +72,6 @@ const PostDetailPage = () => {
           objectFit: 'cover',
         }}
       />
-
-
       <p>작성자: {post.user?.username || '알 수 없음'}</p>
 
       {post.user?._id === currentUserId && (
@@ -83,6 +82,8 @@ const PostDetailPage = () => {
           </button>
         </div>
       )}
+
+      <CommentList postId={postId!} />
     </div>
   );
 };
