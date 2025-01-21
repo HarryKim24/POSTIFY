@@ -58,7 +58,7 @@ const PostDetailPage = () => {
       console.error('좋아요 요청 에러:', error.response?.data || error.message);
     }
   };
-  
+
   const handleDislike = async () => {
     try {
       const response = await API.put(`/posts/${postId}/dislike`);
@@ -67,7 +67,6 @@ const PostDetailPage = () => {
       console.error('싫어요 요청 에러:', error.response?.data || error.message);
     }
   };
-  
 
   if (loading) return <div>로딩 중...</div>;
   if (!post) return <div>게시글을 찾을 수 없습니다.</div>;
@@ -76,6 +75,24 @@ const PostDetailPage = () => {
     <div>
       <h1>게시글 상세</h1>
       {message && <p style={{ color: message.includes('성공') ? 'green' : 'red' }}>{message}</p>}
+      
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '15px' }}>
+        {post.user?.profileImage && (
+          <img
+            src={`http://localhost:3000${post.user.profileImage}`}
+            alt={post.user.username}
+            style={{
+              width: '50px',
+              height: '50px',
+              borderRadius: '50%',
+              marginRight: '10px',
+              objectFit: 'cover',
+            }}
+          />
+        )}
+        <strong>{post.user?.username || '알 수 없음'}</strong>
+      </div>
+
       <h2>{post.title}</h2>
       <p>{post.content}</p>
       <img
@@ -91,8 +108,6 @@ const PostDetailPage = () => {
           objectFit: 'cover',
         }}
       />
-      <p>작성자: {post.user?.username || '알 수 없음'}</p>
-
       <div>
         <button onClick={handleLike}>
           👍 좋아요 ({post.likes?.length || 0})

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import API from '../utils/api';
 import { useNavigate } from 'react-router-dom';
 
@@ -16,7 +16,25 @@ const PostCreatePage = () => {
 
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [username, setUsername] = useState<string | null>(null); 
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const response = await API.get('/auth/me', {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+          },
+        });
+        setUsername(response.data.user.username);
+      } catch (error: any) {
+        console.error('사용자 정보 가져오기 에러:', error.response?.data || error.message);
+      }
+    };
+
+    fetchUser();
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -76,6 +94,7 @@ const PostCreatePage = () => {
   return (
     <div>
       <h1>게시글 작성</h1>
+      {username && <p><strong>작성자:</strong> {username}</p>}
       {message && <p style={{ color: message.includes('성공') ? 'green' : 'red' }}>{message}</p>}
       <form onSubmit={handleSubmit}>
         <div>
