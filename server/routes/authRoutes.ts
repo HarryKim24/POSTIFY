@@ -292,20 +292,16 @@ router.post('/refresh-token', async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    let decoded: any;
-    try {
-      decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET as string);
-    } catch (error) {
-      res.status(403).json({ error: '유효하지 않은 Refresh Token입니다.' });
-      return;
-    }
+    const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET as string) as {
+      userId: string;
+    };
 
-    const userId: string = decoded.userId;
+    const userId = decoded.userId;
 
     const newAccessToken = jwt.sign(
       { userId },
       process.env.JWT_SECRET as string,
-      { expiresIn: '15m' }
+      { expiresIn: '1m' }
     );
 
     res.status(200).json({
@@ -316,6 +312,7 @@ router.post('/refresh-token', async (req: Request, res: Response): Promise<void>
     res.status(500).json({ error: '서버 에러', message: error.message });
   }
 });
+
 
 router.post('/logout', async (req: Request, res: Response): Promise<void> => {
   try {

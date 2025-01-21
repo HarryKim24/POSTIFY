@@ -19,7 +19,7 @@ const ProfilePage = () => {
 
   useEffect(() => {
     const fetchUser = async () => {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       if (!token) {
         setMessage('로그인이 필요합니다.');
         navigate('/login');
@@ -33,8 +33,14 @@ const ProfilePage = () => {
           setPreview(`http://localhost:3000${response.data.user.profileImage}`);
         }
       } catch (error: any) {
-        setMessage(error.response?.data?.error || '사용자 정보를 가져올 수 없습니다.');
-        console.error(error.response?.data);
+        if (error.response?.status === 401) {
+          setMessage('세션이 만료되었습니다. 다시 로그인해주세요.');
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          navigate('/login');
+        } else {
+          setMessage(error.response?.data?.error || '사용자 정보를 가져올 수 없습니다.');
+        }
       }
     };
 
@@ -42,7 +48,9 @@ const ProfilePage = () => {
   }, [navigate]);
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('userId');
     navigate('/login');
   };
 
@@ -54,11 +62,11 @@ const ProfilePage = () => {
     try {
       await API.delete('/auth/delete-account');
       alert('계정이 성공적으로 삭제되었습니다.');
-      localStorage.removeItem('token');
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
       navigate('/register');
     } catch (error: any) {
       alert(error.response?.data?.error || '계정을 삭제하지 못했습니다.');
-      console.error(error.response?.data);
     }
   };
 
@@ -93,7 +101,6 @@ const ProfilePage = () => {
       setUser((prev) => (prev ? { ...prev, profileImage: imageUrl } : prev));
     } catch (error: any) {
       alert(error.response?.data?.error || '이미지 업로드 중 문제가 발생했습니다.');
-      console.error(error.response?.data);
     }
   };
 
@@ -101,7 +108,7 @@ const ProfilePage = () => {
     if (!window.confirm('정말로 프로필 이미지를 삭제하시겠습니까?')) {
       return;
     }
-  
+
     try {
       await API.put('/auth/me/remove-profile-image');
       alert('프로필 이미지가 성공적으로 삭제되었습니다.');
@@ -109,7 +116,6 @@ const ProfilePage = () => {
       setPreview(null);
     } catch (error: any) {
       alert(error.response?.data?.error || '이미지 삭제 중 문제가 발생했습니다.');
-      console.error(error.response?.data);
     }
   };
 

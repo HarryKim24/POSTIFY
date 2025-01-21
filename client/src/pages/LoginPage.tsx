@@ -22,8 +22,13 @@ const LoginPage = () => {
     e.preventDefault();
     try {
       const response = await API.post('/auth/login', formData);
-      localStorage.setItem('token', response.data.accessToken);
-      localStorage.setItem('userId', response.data.user.id);
+  
+      const { accessToken, refreshToken, user } = response.data;
+  
+      localStorage.setItem('accessToken', accessToken);
+      localStorage.setItem('refreshToken', refreshToken);
+      localStorage.setItem('userId', user.id);
+  
       login();
       setMessage('로그인에 성공했습니다!');
       setTimeout(() => {
@@ -34,6 +39,7 @@ const LoginPage = () => {
       setMessage(errorMessage);
     }
   };
+  
 
   return (
     <div>
