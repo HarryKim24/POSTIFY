@@ -45,10 +45,29 @@ router.get('/', async (req: Request, res: Response) => {
   const { page = 1, limit = 10 } = req.query;
 
   try {
-    const posts = await Post.find()
-      .populate('user', 'username')
+    const posts = await Post.aggregate([
+      {
+        $lookup: {
+          from: 'comments',
+          localField: '_id',
+          foreignField: 'post',
+          as: 'comments',
+        },
+      },
+      {
+        $addFields: {
+          commentsCount: { $size: { $ifNull: ['$comments', []] } }, 
+          likesCount: { $size: { $ifNull: ['$likes', []] } }, 
+        },
+      },
+      {
+        $project: {
+          comments: 0, 
+        },
+      },
+    ])
       .sort({ createdAt: -1 })
-      .skip((+page - 1) * +limit) 
+      .skip((+page - 1) * +limit)
       .limit(+limit);
 
     const total = await Post.countDocuments();
@@ -56,42 +75,56 @@ router.get('/', async (req: Request, res: Response) => {
     res.status(200).json({ posts, total, page: +page, limit: +limit });
   } catch (error) {
     console.error('게시글 목록 조회 에러:', error);
-
-    if (error instanceof Error) {
-      res.status(500).json({
-        error: '서버 에러',
-        message: process.env.NODE_ENV === 'development' ? error.message : '문제가 발생했습니다. 다시 시도해주세요.',
-      });
-    } else {
-      res.status(500).json({
-        error: '서버 에러',
-        message: '알 수 없는 문제가 발생했습니다.',
-      });
-    }
+    res.status(500).json({
+      error: '서버 에러',
+      message: '게시글 목록을 불러오는 중 문제가 발생했습니다.',
+    });
   }
 });
+
 
 router.get('/:postId', async (req: Request, res: Response) => {
   const { postId } = req.params;
 
   try {
-    const post = await Post.findById(postId).populate('user', 'username profileImage');
-    if (!post) {
+    const post = await Post.aggregate([
+      {
+        $match: { _id: new mongoose.Types.ObjectId(postId) },
+      },
+      {
+        $lookup: {
+          from: 'comments',
+          localField: '_id',
+          foreignField: 'post',
+          as: 'comments',
+        },
+      },
+      {
+        $addFields: {
+          commentsCount: { $size: '$comments' },
+        },
+      },
+      {
+        $project: {
+          comments: 0,
+        },
+      },
+    ]);
+
+    if (!post.length) {
       return res.status(404).json({ error: '게시글을 찾을 수 없습니다.' });
     }
 
-    res.status(200).json(post);
+    res.status(200).json(post[0]);
   } catch (error) {
     console.error('게시글 상세 조회 에러:', error);
-
-    const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
-
     res.status(500).json({
       error: '서버 에러',
-      message: process.env.NODE_ENV === 'development' ? errorMessage : '문제가 발생했습니다. 다시 시도해주세요.',
+      message: '게시글을 불러오는 중 문제가 발생했습니다.',
     });
   }
 });
+
 
 router.put('/:postId', authenticate, async (req: Request, res: Response) => {
   const { postId } = req.params;

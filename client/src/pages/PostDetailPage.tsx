@@ -75,7 +75,7 @@ const PostDetailPage = () => {
     <div>
       <h1>게시글 상세</h1>
       {message && <p style={{ color: message.includes('성공') ? 'green' : 'red' }}>{message}</p>}
-      
+
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: '15px' }}>
         {post.user?.profileImage ? (
           <img
@@ -84,7 +84,7 @@ const PostDetailPage = () => {
                 ? post.user.profileImage
                 : `http://localhost:3000${post.user.profileImage}`
             }
-            alt={post.user.username}
+            alt={post.user.username || '익명 사용자'}
             style={{
               width: '50px',
               height: '50px',
@@ -107,7 +107,7 @@ const PostDetailPage = () => {
               fontSize: '14px',
             }}
           >
-            {post.user?.username[0]?.toUpperCase() || '?'}
+            {post.user?.username?.[0]?.toUpperCase() || '?'}
           </div>
         )}
         <strong>{post.user?.username || '알 수 없음'}</strong>
