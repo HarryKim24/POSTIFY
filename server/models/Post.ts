@@ -5,6 +5,8 @@ export interface IPost extends Document {
   content: string;
   imageUrl?: string;
   user: Types.ObjectId;
+  likes: Types.ObjectId[];
+  dislikes: Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -28,6 +30,8 @@ const postSchema = new Schema<IPost>(
       ref: 'User',
       required: true,
     },
+    likes: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+    dislikes: [{ type: Schema.Types.ObjectId, ref: 'User' }],
   },
   { timestamps: true }
 );

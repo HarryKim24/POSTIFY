@@ -1,6 +1,7 @@
+import mongoose from 'mongoose';
 import { Router, Request, Response } from 'express';
 import Post, { IPost } from '../models/Post';
-import authenticate from '../middleware/authMiddleware';
+import authenticate, { AuthRequest } from '../middleware/authMiddleware';
 
 const router = Router();
 
@@ -155,6 +156,57 @@ router.delete('/:postId', authenticate, async (req: Request, res: Response) => {
       error: '서버 에러',
       message: process.env.NODE_ENV === 'development' ? errorMessage : '문제가 발생했습니다. 다시 시도해주세요.',
     });
+  }
+});
+
+router.put('/:postId/like', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const { postId } = req.params;
+    const userId = new mongoose.Types.ObjectId(req.userId);
+
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.status(404).json({ error: '게시글을 찾을 수 없습니다.' });
+    }
+
+    if (post.likes.some((id) => id.equals(userId))) {
+      post.likes = post.likes.filter((id) => !id.equals(userId));
+    } else {
+      post.likes.push(userId);
+      post.dislikes = post.dislikes.filter((id) => !id.equals(userId));
+    }
+
+    await post.save();
+    res.status(200).json({ message: '좋아요 업데이트 성공', likes: post.likes, dislikes: post.dislikes });
+  } catch (error) {
+    console.error('좋아요 업데이트 에러:', error);
+    res.status(500).json({ error: '서버 에러가 발생했습니다.' });
+  }
+});
+
+
+router.put('/:postId/dislike', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const { postId } = req.params;
+    const userId = new mongoose.Types.ObjectId(req.userId);
+
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.status(404).json({ error: '게시글을 찾을 수 없습니다.' });
+    }
+
+    if (post.dislikes.some((id) => id.equals(userId))) {
+      post.dislikes = post.dislikes.filter((id) => !id.equals(userId));
+    } else {
+      post.dislikes.push(userId);
+      post.likes = post.likes.filter((id) => !id.equals(userId));
+    }
+
+    await post.save();
+    res.status(200).json({ message: '싫어요 업데이트 성공', likes: post.likes, dislikes: post.dislikes });
+  } catch (error) {
+    console.error('싫어요 업데이트 에러:', error);
+    res.status(500).json({ error: '서버 에러가 발생했습니다.' });
   }
 });
 

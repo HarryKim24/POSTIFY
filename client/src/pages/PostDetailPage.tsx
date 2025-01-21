@@ -50,6 +50,25 @@ const PostDetailPage = () => {
     }
   };
 
+  const handleLike = async () => {
+    try {
+      const response = await API.put(`/posts/${postId}/like`);
+      setPost({ ...post, likes: response.data.likes, dislikes: response.data.dislikes });
+    } catch (error: any) {
+      console.error('좋아요 요청 에러:', error.response?.data || error.message);
+    }
+  };
+  
+  const handleDislike = async () => {
+    try {
+      const response = await API.put(`/posts/${postId}/dislike`);
+      setPost({ ...post, likes: response.data.likes, dislikes: response.data.dislikes });
+    } catch (error: any) {
+      console.error('싫어요 요청 에러:', error.response?.data || error.message);
+    }
+  };
+  
+
   if (loading) return <div>로딩 중...</div>;
   if (!post) return <div>게시글을 찾을 수 없습니다.</div>;
 
@@ -61,7 +80,7 @@ const PostDetailPage = () => {
       <p>{post.content}</p>
       <img
         src={
-          post.imageUrl.startsWith('http') 
+          post.imageUrl.startsWith('http')
             ? post.imageUrl
             : `http://localhost:3000${post.imageUrl}`
         }
@@ -73,6 +92,15 @@ const PostDetailPage = () => {
         }}
       />
       <p>작성자: {post.user?.username || '알 수 없음'}</p>
+
+      <div>
+        <button onClick={handleLike}>
+          👍 좋아요 ({post.likes?.length || 0})
+        </button>
+        <button onClick={handleDislike} style={{ marginLeft: '10px' }}>
+          👎 싫어요 ({post.dislikes?.length || 0})
+        </button>
+      </div>
 
       {post.user?._id === currentUserId && (
         <div>
