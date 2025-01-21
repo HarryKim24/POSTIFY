@@ -5,7 +5,10 @@ import API from '../utils/api';
 interface Comment {
   _id: string;
   content: string;
-  user: { username: string };
+  user: {
+    username: string;
+    profileImage?: string | null;
+  };
   createdAt: string;
 }
 
@@ -53,19 +56,69 @@ const CommentList = ({ postId }: { postId: string }) => {
   return (
     <div>
       <h3>댓글</h3>
-      <textarea
-        value={newComment}
-        onChange={(e) => setNewComment(e.target.value)}
-        placeholder="댓글을 입력하세요"
-      />
-      <button onClick={handleAddComment}>작성</button>
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
+        {comments[0]?.user.profileImage && (
+          <img
+            src={`http://localhost:3000${comments[0].user.profileImage}`}
+            alt={`${comments[0]?.user.username}의 프로필 이미지`}
+            style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: '50%',
+              marginRight: '10px',
+            }}
+          />
+          
+        )}
+        <textarea
+          value={newComment}
+          onChange={(e) => setNewComment(e.target.value)}
+          placeholder="댓글을 입력하세요"
+          style={{
+            flexGrow: 1,
+            marginRight: '10px',
+            resize: 'none',
+          }}
+        />
+        <button onClick={handleAddComment}>작성</button>
+      </div>
       {error && <p style={{ color: 'red' }}>{error}</p>}
       <ul>
         {comments.map((comment) => (
-          <li key={comment._id}>
-            <p><strong>{comment.user.username}</strong>: {comment.content}</p>
-            <p>{new Date(comment.createdAt).toLocaleString()}</p>
-            <button onClick={() => handleDeleteComment(comment._id)}>삭제</button>
+          <li
+            key={comment._id}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              marginBottom: '1rem',
+            }}
+          >
+            {comment.user.profileImage && (
+              <img
+                src={`http://localhost:3000${comment.user.profileImage}`}
+                alt={`${comment.user.username}의 프로필 이미지`}
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  marginRight: '10px',
+                }}
+              />
+            )}
+            <div>
+              <p>
+                <strong>{comment.user.username}</strong>: {comment.content}
+              </p>
+              <p style={{ fontSize: '0.9rem', color: 'gray' }}>
+                {new Date(comment.createdAt).toLocaleString()}
+              </p>
+              <button
+                onClick={() => handleDeleteComment(comment._id)}
+                style={{ color: 'red' }}
+              >
+                삭제
+              </button>
+            </div>
           </li>
         ))}
       </ul>

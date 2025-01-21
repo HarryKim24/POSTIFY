@@ -22,7 +22,7 @@ router.post('/:postId', authenticate, async (req, res) => {
 
     const comment = new Comment({ content, user: userId, post: postId });
     await comment.save();
-    await comment.populate('user', 'username');
+    await comment.populate('user', 'username profileImage');
 
     res.status(201).json({ message: '댓글 작성 성공', comment });
   } catch (error) {
@@ -35,7 +35,7 @@ router.get('/:postId', async (req, res) => {
   try {
     const { postId } = req.params;
     const comments = await Comment.find({ post: postId })
-      .populate('user', 'username')
+      .populate('user', 'username profileImage')
       .sort({ createdAt: -1 });
 
     res.status(200).json({ comments });
