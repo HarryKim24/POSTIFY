@@ -14,7 +14,6 @@ const ProfilePage = () => {
   const [user, setUser] = useState<User | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [profileImage, setProfileImage] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -29,9 +28,6 @@ const ProfilePage = () => {
       try {
         const response = await API.get('/auth/me');
         setUser(response.data.user);
-        if (response.data.user.profileImage) {
-          setPreview(`http://localhost:3000${response.data.user.profileImage}`);
-        }
       } catch (error: any) {
         if (error.response?.status === 401) {
           setMessage('세션이 만료되었습니다. 다시 로그인해주세요.');
@@ -73,9 +69,6 @@ const ProfilePage = () => {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
     setProfileImage(file);
-    if (file) {
-      setPreview(URL.createObjectURL(file));
-    }
   };
 
   const handleImageUpload = async () => {
@@ -99,6 +92,7 @@ const ProfilePage = () => {
       await API.put('/auth/me', { profileImage: imageUrl });
       alert('프로필 이미지가 성공적으로 업데이트되었습니다.');
       setUser((prev) => (prev ? { ...prev, profileImage: imageUrl } : prev));
+      setProfileImage(null);
     } catch (error: any) {
       alert(error.response?.data?.error || '이미지 업로드 중 문제가 발생했습니다.');
     }
@@ -113,7 +107,6 @@ const ProfilePage = () => {
       await API.put('/auth/me/remove-profile-image');
       alert('프로필 이미지가 성공적으로 삭제되었습니다.');
       setUser((prev) => (prev ? { ...prev, profileImage: null } : prev));
-      setPreview(null);
     } catch (error: any) {
       alert(error.response?.data?.error || '이미지 삭제 중 문제가 발생했습니다.');
     }
@@ -125,12 +118,29 @@ const ProfilePage = () => {
       {message && <p style={{ color: 'red' }}>{message}</p>}
       {user ? (
         <div>
-          <p><strong>사용자 이름:</strong> {user.username}</p>
-          <p><strong>이메일:</strong> {user.email}</p>
-          {preview && <img src={preview} alt="프로필 미리보기" style={{ maxWidth: '150px', borderRadius: '50%' }} />}
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
+            {user.profileImage && (
+              <img
+                src={`http://localhost:3000${user.profileImage}`}
+                alt="프로필 이미지"
+                style={{
+                  maxWidth: '50px',
+                  maxHeight: '50px',
+                  borderRadius: '50%',
+                  marginRight: '10px',
+                }}
+              />
+            )}
+            <div>
+              <p><strong>사용자 이름:</strong> {user.username}</p>
+              <p><strong>이메일:</strong> {user.email}</p>
+            </div>
+          </div>
           <div>
             <input type="file" accept="image/*" onChange={handleImageChange} />
-            <button onClick={handleImageUpload}>이미지 업로드</button>
+            <button onClick={handleImageUpload} disabled={!profileImage}>
+              이미지 업로드
+            </button>
             {user.profileImage && (
               <button onClick={handleDeleteImage} style={{ marginLeft: '10px', color: 'red' }}>
                 이미지 삭제
