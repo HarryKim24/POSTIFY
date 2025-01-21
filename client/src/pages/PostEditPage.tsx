@@ -6,10 +6,14 @@ import API from '../utils/api';
 const PostEditPage = () => {
   const { postId } = useParams<{ postId: string }>();
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    title: string;
+    content: string;
+    image: File | null;
+  }>({
     title: '',
     content: '',
-    imageUrl: '',
+    image: null,
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -19,8 +23,8 @@ const PostEditPage = () => {
       setLoading(true);
       try {
         const response = await API.get(`/posts/${postId}`);
-        const { title, content, imageUrl } = response.data;
-        setFormData({ title, content, imageUrl });
+        const { title, content } = response.data;
+        setFormData({ title, content, image: null });
       } catch (error: any) {
         const errorMessage = error.response?.data?.error || '게시글 정보를 가져오는데 실패했습니다.';
         setMessage(errorMessage);
@@ -38,13 +42,47 @@ const PostEditPage = () => {
     setFormData({ ...formData, [name]: value });
   };
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setFormData({ ...formData, image: e.target.files[0] });
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
+
     try {
-      await API.put(`/posts/${postId}`, formData);
+      let imageUrl = '';
+
+      if (formData.image) {
+        const uploadFormData = new FormData();
+        uploadFormData.append('image', formData.image);
+
+        const uploadResponse = await API.post('/upload', uploadFormData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+          },
+        });
+
+        imageUrl = uploadResponse.data.imageUrl;
+      }
+
+      const postPayload = {
+        title: formData.title,
+        content: formData.content,
+        imageUrl,
+      };
+
+      await API.put(`/posts/${postId}`, postPayload, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+        },
+      });
+
       setMessage('게시글이 성공적으로 수정되었습니다.');
-      navigate(`/posts/${postId}`);
+      setTimeout(() => navigate(`/posts/${postId}`), 1500);
     } catch (error: any) {
       const errorMessage = error.response?.data?.error || '게시글 수정에 실패했습니다.';
       setMessage(errorMessage);
@@ -81,12 +119,11 @@ const PostEditPage = () => {
           ></textarea>
         </div>
         <div>
-          <label>이미지 URL</label>
+          <label>이미지 업로드</label>
           <input
-            type="text"
-            name="imageUrl"
-            value={formData.imageUrl}
-            onChange={handleChange}
+            type="file"
+            accept="image/*"
+            onChange={handleImageChange}
             disabled={loading}
           />
         </div>
