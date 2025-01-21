@@ -1,10 +1,19 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/useAuthStore';
+import { useEffect } from 'react';
 
 const Navigation = () => {
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
+  const login = useAuthStore((state) => state.login);
   const logout = useAuthStore((state) => state.logout);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const accessToken = localStorage.getItem('accessToken');
+    if (accessToken) {
+      login();
+    }
+  }, [login]);
 
   const handleLogout = () => {
     logout();
