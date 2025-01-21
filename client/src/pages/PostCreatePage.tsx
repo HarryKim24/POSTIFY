@@ -65,7 +65,7 @@ const PostCreatePage = () => {
           },
         });
 
-        imageUrl = uploadResponse.data.imageUrl;
+        imageUrl = uploadResponse.data.imageUrl || null;
       }
 
       const postPayload = {

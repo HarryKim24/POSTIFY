@@ -23,7 +23,7 @@ router.post('/', authenticate, async (req: Request, res: Response) => {
     const newPost: IPost = new Post({
       title,
       content,
-      imageUrl,
+      imageUrl: imageUrl || null,
       user: userId,
     });
 

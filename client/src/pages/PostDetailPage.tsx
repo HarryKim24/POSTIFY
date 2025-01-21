@@ -95,19 +95,13 @@ const PostDetailPage = () => {
 
       <h2>{post.title}</h2>
       <p>{post.content}</p>
-      <img
-        src={
-          post.imageUrl.startsWith('http')
-            ? post.imageUrl
-            : `http://localhost:3000${post.imageUrl}`
-        }
-        alt={post.title}
-        style={{
-          maxWidth: '300px',
-          maxHeight: '300px',
-          objectFit: 'cover',
-        }}
-      />
+      {post.imageUrl && (
+        <img
+          src={post.imageUrl.startsWith('http') ? post.imageUrl : `http://localhost:3000${post.imageUrl}`}
+          alt="게시글 이미지"
+          style={{ maxWidth: '300px', maxHeight: '300px', objectFit: 'cover' }}
+        />
+      )}
       <div>
         <button onClick={handleLike}>
           👍 좋아요 ({post.likes?.length || 0})
