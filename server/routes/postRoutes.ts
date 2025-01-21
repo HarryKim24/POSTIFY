@@ -74,7 +74,7 @@ router.get('/:postId', async (req: Request, res: Response) => {
   const { postId } = req.params;
 
   try {
-    const post = await Post.findById(postId).populate('user', 'username');
+    const post = await Post.findById(postId).populate('user', 'username profileImage');
     if (!post) {
       return res.status(404).json({ error: '게시글을 찾을 수 없습니다.' });
     }

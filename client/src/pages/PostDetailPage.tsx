@@ -77,9 +77,13 @@ const PostDetailPage = () => {
       {message && <p style={{ color: message.includes('성공') ? 'green' : 'red' }}>{message}</p>}
       
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: '15px' }}>
-        {post.user?.profileImage && (
+        {post.user?.profileImage ? (
           <img
-            src={`http://localhost:3000${post.user.profileImage}`}
+            src={
+              post.user.profileImage.startsWith('http')
+                ? post.user.profileImage
+                : `http://localhost:3000${post.user.profileImage}`
+            }
             alt={post.user.username}
             style={{
               width: '50px',
@@ -89,6 +93,22 @@ const PostDetailPage = () => {
               objectFit: 'cover',
             }}
           />
+        ) : (
+          <div
+            style={{
+              width: '50px',
+              height: '50px',
+              borderRadius: '50%',
+              marginRight: '10px',
+              backgroundColor: '#ccc',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '14px',
+            }}
+          >
+            {post.user?.username[0]?.toUpperCase() || '?'}
+          </div>
         )}
         <strong>{post.user?.username || '알 수 없음'}</strong>
       </div>
