@@ -9,6 +9,8 @@ import Image from '../models/Image';
 
 const router = Router();
 
+const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
+
 router.post('/', upload.single('image'), async (req, res) => {
   try {
     if (!req.file) {
@@ -30,7 +32,7 @@ router.post('/', upload.single('image'), async (req, res) => {
     }
 
     const newImage = new Image({
-      url: `${process.env.BASE_URL || ''}/uploads/${req.file.filename}`,
+      url: `${BASE_URL}/uploads/${req.file.filename}`,
       hash,
     });
     await newImage.save();
@@ -45,8 +47,6 @@ router.post('/', upload.single('image'), async (req, res) => {
   }
 });
 
-
-
 router.post('/profile-image', authenticate, upload.single('image'), async (req, res) => {
   try {
     const userId = (req as any).userId;
@@ -55,19 +55,19 @@ router.post('/profile-image', authenticate, upload.single('image'), async (req, 
       return res.status(400).json({ error: '파일이 업로드되지 않았습니다.' });
     }
 
-    const filePath = path.join(__dirname, '..', req.file.path);
-    const fileBuffer = fs.readFileSync(filePath);
+    const filePath = path.resolve(req.file.path);
+    const fileBuffer = await fs.promises.readFile(filePath);
     const hash = crypto.createHash('md5').update(fileBuffer).digest('hex');
 
     const existingImage = await Image.findOne({ hash });
     let imageUrl: string;
 
     if (existingImage) {
-      fs.unlinkSync(filePath);
+      await fs.promises.unlink(filePath);
       imageUrl = existingImage.url;
     } else {
       const newImage = new Image({
-        url: `/uploads/${req.file.filename}`,
+        url: `${BASE_URL}/uploads/${req.file.filename}`,
         hash,
       });
       await newImage.save();
