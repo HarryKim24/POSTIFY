@@ -8,7 +8,6 @@ const Navigation = () => {
   const login = useAuthStore((state) => state.login);
   const logout = useAuthStore((state) => state.logout);
   const navigate = useNavigate();
-  const baseURL = import.meta.env.VITE_BASE_URL || '';
 
   useEffect(() => {
     const checkAuthStatus = async () => {
@@ -44,11 +43,11 @@ const Navigation = () => {
 
   return (
     <nav style={{ display: 'flex', gap: '1rem', padding: '1rem', backgroundColor: '#f4f4f4' }}>
-      <Link to={`${baseURL}/`} style={{ textDecoration: 'none', color: '#007bff' }}>게시글 목록</Link>
+      <Link to="/" style={{ textDecoration: 'none', color: '#007bff' }}>게시글 목록</Link>
       {isLoggedIn ? (
         <>
-          <Link to={`${baseURL}/posts/create`} style={{ textDecoration: 'none', color: '#007bff' }}>게시글 작성</Link>
-          <Link to={`${baseURL}/profile`} style={{ textDecoration: 'none', color: '#007bff' }}>내 프로필</Link>
+          <Link to="/posts/create" style={{ textDecoration: 'none', color: '#007bff' }}>게시글 작성</Link>
+          <Link to="/profile" style={{ textDecoration: 'none', color: '#007bff' }}>내 프로필</Link>
           <button
             onClick={handleLogout}
             style={{
@@ -64,8 +63,8 @@ const Navigation = () => {
         </>
       ) : (
         <>
-          <Link to={`${baseURL}/login`} style={{ textDecoration: 'none', color: '#007bff' }}>로그인</Link>
-          <Link to={`${baseURL}/register`} style={{ textDecoration: 'none', color: '#007bff' }}>회원가입</Link>
+          <Link to="/login" style={{ textDecoration: 'none', color: '#007bff' }}>로그인</Link>
+          <Link to="/register" style={{ textDecoration: 'none', color: '#007bff' }}>회원가입</Link>
         </>
       )}
     </nav>
