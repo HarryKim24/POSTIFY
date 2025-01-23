@@ -1,22 +1,32 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import API from '../utils/api';
 import { Link } from 'react-router-dom';
 
 const PostListPage = () => {
-  const [posts, setPosts] = useState([]);
+  const [posts, setPosts] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'popular'>('all');
 
-  const fetchPosts = async (searchQuery = '', filterQuery = 'all') => {
+  const observer = useRef<IntersectionObserver | null>(null);
+  const lastPostRef = useRef<HTMLLIElement | null>(null);
+
+  const fetchPosts = async (searchQuery = '', filterQuery = 'all', pageNumber = 1) => {
     setLoading(true);
     try {
       const response = await API.get('/posts', {
-        params: { search: searchQuery.trim(), filter: filterQuery },
+        params: { search: searchQuery.trim(), filter: filterQuery, page: pageNumber },
       });
-      setPosts(response.data.posts);
+      if (pageNumber === 1) {
+        setPosts(response.data.posts);
+      } else {
+        setPosts((prevPosts) => [...prevPosts, ...response.data.posts]);
+      }
+      setHasMore(response.data.posts.length > 0);
     } catch (err: any) {
       const errorMessage = err.response?.data?.error || '게시글을 불러오는 중 문제가 발생했습니다.';
       setError(errorMessage);
@@ -27,20 +37,42 @@ const PostListPage = () => {
   };
 
   useEffect(() => {
-    fetchPosts();
-  }, []);
+    fetchPosts(search, filter, 1);
+  }, [search, filter]);
+
+  useEffect(() => {
+    if (observer.current) observer.current.disconnect();
+    observer.current = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loading) {
+          setPage((prevPage) => prevPage + 1);
+        }
+      },
+      { threshold: 1.0 }
+    );
+    if (lastPostRef.current) observer.current.observe(lastPostRef.current);
+  }, [hasMore, loading]);
+
+  useEffect(() => {
+    if (page > 1) {
+      fetchPosts(search, filter, page);
+    }
+  }, [page, search, filter]);
 
   const handleSearch = () => {
-    fetchPosts(search, filter);
+    setPage(1);
+    fetchPosts(search, filter, 1);
   };
 
   const handleFilterChange = (newFilter: 'all' | 'popular') => {
     setSearch('');
     setFilter(newFilter);
-    fetchPosts('', newFilter);
+    setPage(1);
   };
 
-  if (loading) return <div>로딩 중...</div>;
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   return (
     <div>
@@ -82,8 +114,12 @@ const PostListPage = () => {
       </div>
       {error && <p style={{ color: 'red' }}>{error}</p>}
       <ul>
-        {posts.map((post: any) => (
-          <li key={post._id} style={{ marginBottom: '20px', padding: '10px', border: '1px solid #ccc' }}>
+        {posts.map((post: any, index) => (
+          <li
+            ref={index === posts.length - 1 ? lastPostRef : null}
+            key={post._id}
+            style={{ marginBottom: '20px', padding: '10px', border: '1px solid #ccc' }}
+          >
             <Link to={`/posts/${post._id}`}>
               <h2>{post.title}</h2>
               <p>{post.content}</p>
@@ -98,6 +134,23 @@ const PostListPage = () => {
           </li>
         ))}
       </ul>
+      {loading && <p>로딩 중...</p>}
+      <button
+        onClick={scrollToTop}
+        style={{
+          position: 'fixed',
+          bottom: '20px',
+          right: '20px',
+          padding: '10px 20px',
+          backgroundColor: '#007bff',
+          color: '#fff',
+          border: 'none',
+          borderRadius: '5px',
+          cursor: 'pointer',
+        }}
+      >
+        ▲ 최상단으로
+      </button>
     </div>
   );
 };

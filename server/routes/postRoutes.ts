@@ -42,7 +42,7 @@ router.post('/', authenticate, async (req: Request, res: Response) => {
 });
 
 router.get('/', async (req: Request, res: Response) => {
-  const { page = 1, limit = 10, search = '', filter = 'all' } = req.query;
+  const { page = 1, limit = 5, search = '', filter = 'all' } = req.query;
 
   try {
     const searchRegex = new RegExp(search as string, 'i');
