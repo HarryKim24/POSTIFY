@@ -16,17 +16,21 @@ router.post('/', upload.single('image'), async (req, res) => {
     }
 
     const filePath = path.resolve(req.file.path);
-    const fileBuffer = fs.readFileSync(filePath);
+    const fileBuffer = await fs.promises.readFile(filePath);
     const hash = crypto.createHash('md5').update(fileBuffer).digest('hex');
 
     const existingImage = await Image.findOne({ hash });
     if (existingImage) {
-      fs.unlinkSync(filePath);
-      return res.status(200).json({ message: '이미 존재하는 이미지입니다.', imageUrl: existingImage.url });
+      await fs.promises.unlink(filePath);
+      return res.status(200).json({ 
+        message: '이미 존재하는 이미지입니다.', 
+        imageUrl: existingImage.url,
+        existing: true,
+      });
     }
 
     const newImage = new Image({
-      url: `/uploads/${req.file.filename}`,
+      url: `${process.env.BASE_URL || ''}/uploads/${req.file.filename}`,
       hash,
     });
     await newImage.save();
@@ -34,9 +38,13 @@ router.post('/', upload.single('image'), async (req, res) => {
     res.status(200).json({ message: '이미지 업로드 성공', imageUrl: newImage.url });
   } catch (error: any) {
     console.error('이미지 업로드 에러:', error.message);
-    res.status(500).json({ error: '서버 에러', message: error.message });
+    res.status(500).json({
+      error: '서버 에러',
+      message: process.env.NODE_ENV === 'development' ? error.message : '문제가 발생했습니다.',
+    });
   }
 });
+
 
 
 router.post('/profile-image', authenticate, upload.single('image'), async (req, res) => {

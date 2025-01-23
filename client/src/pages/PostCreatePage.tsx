@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import API from '../utils/api';
@@ -16,15 +17,19 @@ const PostCreatePage = () => {
 
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [username, setUsername] = useState<string | null>(null); 
+  const [username, setUsername] = useState<string | null>(null);
   const navigate = useNavigate();
+
+  const STORAGE_KEYS = {
+    ACCESS_TOKEN: 'accessToken',
+  };
 
   useEffect(() => {
     const fetchUser = async () => {
       try {
         const response = await API.get('/auth/me', {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+            Authorization: `Bearer ${localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN)}`,
           },
         });
         setUsername(response.data.user.username);
@@ -61,11 +66,11 @@ const PostCreatePage = () => {
         const uploadResponse = await API.post('/upload', uploadFormData, {
           headers: {
             'Content-Type': 'multipart/form-data',
-            Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+            Authorization: `Bearer ${localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN)}`,
           },
         });
 
-        imageUrl = uploadResponse.data.imageUrl || null;
+        imageUrl = uploadResponse.data.imageUrl || '';
       }
 
       const postPayload = {
@@ -76,7 +81,7 @@ const PostCreatePage = () => {
 
       await API.post('/posts', postPayload, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+          Authorization: `Bearer ${localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN)}`,
         },
       });
 
@@ -98,8 +103,9 @@ const PostCreatePage = () => {
       {message && <p style={{ color: message.includes('성공') ? 'green' : 'red' }}>{message}</p>}
       <form onSubmit={handleSubmit}>
         <div>
-          <label>제목</label>
+          <label htmlFor="title">제목</label>
           <input
+            id="title"
             type="text"
             name="title"
             value={formData.title}
@@ -108,8 +114,9 @@ const PostCreatePage = () => {
           />
         </div>
         <div>
-          <label>내용</label>
+          <label htmlFor="content">내용</label>
           <textarea
+            id="content"
             name="content"
             value={formData.content}
             onChange={handleChange}
@@ -117,8 +124,9 @@ const PostCreatePage = () => {
           />
         </div>
         <div>
-          <label>이미지 업로드</label>
+          <label htmlFor="image">이미지 업로드</label>
           <input
+            id="image"
             type="file"
             accept="image/*"
             onChange={handleImageChange}

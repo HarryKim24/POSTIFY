@@ -9,11 +9,10 @@ const PostDetailPage = () => {
   const navigate = useNavigate();
   const [post, setPost] = useState<any>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchPost = async () => {
-      setLoading(true);
       try {
         const response = await API.get(`/posts/${postId}`);
         setPost(response.data);
@@ -31,17 +30,13 @@ const PostDetailPage = () => {
   const currentUserId = localStorage.getItem('userId');
 
   const handleDelete = async () => {
-    if (!window.confirm('정말로 게시글을 삭제하시겠습니까?')) {
-      return;
-    }
+    if (!window.confirm('정말로 게시글을 삭제하시겠습니까?')) return;
 
-    setLoading(true);
     try {
+      setLoading(true);
       await API.delete(`/posts/${postId}`);
       setMessage('게시글이 성공적으로 삭제되었습니다.');
-      setTimeout(() => {
-        navigate('/');
-      }, 1000);
+      setTimeout(() => navigate('/'), 1000);
     } catch (error: any) {
       const errorMessage = error.response?.data?.error || '게시글 삭제에 실패했습니다.';
       setMessage(errorMessage);
@@ -50,21 +45,12 @@ const PostDetailPage = () => {
     }
   };
 
-  const handleLike = async () => {
+  const handleReaction = async (reactionType: 'like' | 'dislike') => {
     try {
-      const response = await API.put(`/posts/${postId}/like`);
+      const response = await API.put(`/posts/${postId}/${reactionType}`);
       setPost({ ...post, likes: response.data.likes, dislikes: response.data.dislikes });
     } catch (error: any) {
-      console.error('좋아요 요청 에러:', error.response?.data || error.message);
-    }
-  };
-
-  const handleDislike = async () => {
-    try {
-      const response = await API.put(`/posts/${postId}/dislike`);
-      setPost({ ...post, likes: response.data.likes, dislikes: response.data.dislikes });
-    } catch (error: any) {
-      console.error('싫어요 요청 에러:', error.response?.data || error.message);
+      console.error(`${reactionType === 'like' ? '좋아요' : '싫어요'} 요청 에러:`, error.response?.data || error.message);
     }
   };
 
@@ -79,11 +65,7 @@ const PostDetailPage = () => {
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: '15px' }}>
         {post.user?.profileImage ? (
           <img
-            src={
-              post.user.profileImage.startsWith('http')
-                ? post.user.profileImage
-                : `http://localhost:3000${post.user.profileImage}`
-            }
+            src={post.user.profileImage.startsWith('http') ? post.user.profileImage : `${import.meta.env.VITE_API_URL}${post.user.profileImage}`}
             alt={post.user.username || '익명 사용자'}
             style={{
               width: '50px',
@@ -117,16 +99,16 @@ const PostDetailPage = () => {
       <p>{post.content}</p>
       {post.imageUrl && (
         <img
-          src={post.imageUrl.startsWith('http') ? post.imageUrl : `http://localhost:3000${post.imageUrl}`}
+          src={post.imageUrl.startsWith('http') ? post.imageUrl : `${import.meta.env.VITE_API_URL}${post.imageUrl}`}
           alt="게시글 이미지"
           style={{ maxWidth: '300px', maxHeight: '300px', objectFit: 'cover' }}
         />
       )}
       <div>
-        <button onClick={handleLike}>
+        <button onClick={() => handleReaction('like')}>
           👍 좋아요 ({post.likes?.length || 0})
         </button>
-        <button onClick={handleDislike} style={{ marginLeft: '10px' }}>
+        <button onClick={() => handleReaction('dislike')} style={{ marginLeft: '10px' }}>
           👎 싫어요 ({post.dislikes?.length || 0})
         </button>
       </div>

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useCallback } from 'react';
 import API from '../utils/api';
@@ -22,7 +23,7 @@ const CommentList = ({ postId }: { postId: string }) => {
       const response = await API.get(`/comments/${postId}`);
       setComments(response.data.comments);
     } catch (error: any) {
-      setError(error.response?.data?.error || '댓글을 불러오는 데 실패했습니다.');
+      setError('댓글을 불러오는 데 문제가 발생했습니다.');
     }
   }, [postId]);
 
@@ -38,7 +39,7 @@ const CommentList = ({ postId }: { postId: string }) => {
       setComments([response.data.comment, ...comments]);
       setNewComment('');
     } catch (error: any) {
-      setError(error.response?.data?.error || '댓글 작성에 실패했습니다.');
+      setError('댓글 작성에 실패했습니다.');
     }
   };
 
@@ -49,7 +50,7 @@ const CommentList = ({ postId }: { postId: string }) => {
       await API.delete(`/comments/${commentId}`);
       setComments(comments.filter((comment) => comment._id !== commentId));
     } catch (error: any) {
-      setError(error.response?.data?.error || '댓글 삭제에 실패했습니다.');
+      setError('댓글 삭제에 실패했습니다.');
     }
   };
 
@@ -59,7 +60,7 @@ const CommentList = ({ postId }: { postId: string }) => {
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
         {comments[0]?.user.profileImage && (
           <img
-            src={`http://localhost:3000${comments[0].user.profileImage}`}
+            src={`${import.meta.env.VITE_API_URL}${comments[0].user.profileImage}`}
             alt={`${comments[0]?.user.username}의 프로필 이미지`}
             style={{
               width: '40px',
@@ -68,7 +69,6 @@ const CommentList = ({ postId }: { postId: string }) => {
               marginRight: '10px',
             }}
           />
-          
         )}
         <textarea
           value={newComment}
@@ -95,7 +95,7 @@ const CommentList = ({ postId }: { postId: string }) => {
           >
             {comment.user.profileImage && (
               <img
-                src={`http://localhost:3000${comment.user.profileImage}`}
+                src={`${import.meta.env.VITE_API_URL}${comment.user.profileImage}`}
                 alt={`${comment.user.username}의 프로필 이미지`}
                 style={{
                   width: '40px',

@@ -55,37 +55,14 @@ router.get('/', async (req: Request, res: Response) => {
           }
         : {};
 
-    const posts = await Post.aggregate([
-      {
-        $lookup: {
-          from: 'comments',
-          localField: '_id',
-          foreignField: 'post',
-          as: 'comments',
-        },
-      },
-      {
-        $addFields: {
-          commentsCount: { $size: { $ifNull: ['$comments', []] } },
-          likesCount: { $size: { $ifNull: ['$likes', []] } },
-        },
-      },
-      {
-        $match: {
-          ...matchFilter,
-          $or: [
-            { title: searchRegex },
-            { content: searchRegex },
-            { 'user.username': searchRegex },
-          ],
-        },
-      },
-      {
-        $project: {
-          comments: 0,
-        },
-      },
-    ])
+    const posts = await Post.find({
+      ...matchFilter,
+      $or: [
+        { title: searchRegex },
+        { content: searchRegex },
+      ],
+    })
+      .populate('user', 'username profileImage')
       .sort({ createdAt: -1 })
       .skip((+page - 1) * +limit)
       .limit(+limit);
@@ -95,7 +72,6 @@ router.get('/', async (req: Request, res: Response) => {
       $or: [
         { title: searchRegex },
         { content: searchRegex },
-        { 'user.username': searchRegex },
       ],
     });
 
@@ -114,35 +90,18 @@ router.get('/:postId', async (req: Request, res: Response) => {
   const { postId } = req.params;
 
   try {
-    const post = await Post.aggregate([
-      {
-        $match: { _id: new mongoose.Types.ObjectId(postId) },
-      },
-      {
-        $lookup: {
-          from: 'comments',
-          localField: '_id',
-          foreignField: 'post',
-          as: 'comments',
-        },
-      },
-      {
-        $addFields: {
-          commentsCount: { $size: '$comments' },
-        },
-      },
-      {
-        $project: {
-          comments: 0,
-        },
-      },
-    ]);
+    const post = await Post.findById(postId)
+      .populate('user', 'username profileImage')
+      .populate({
+        path: 'comments',
+        populate: { path: 'user', select: 'username profileImage' }, 
+      });
 
-    if (!post.length) {
+    if (!post) {
       return res.status(404).json({ error: '게시글을 찾을 수 없습니다.' });
     }
 
-    res.status(200).json(post[0]);
+    res.status(200).json(post);
   } catch (error) {
     console.error('게시글 상세 조회 에러:', error);
     res.status(500).json({

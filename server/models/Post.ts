@@ -7,6 +7,7 @@ export interface IPost extends Document {
   user: Types.ObjectId;
   likes: Types.ObjectId[];
   dislikes: Types.ObjectId[];
+  comments: Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -32,6 +33,7 @@ const postSchema = new Schema<IPost>(
     },
     likes: [{ type: Schema.Types.ObjectId, ref: 'User' }],
     dislikes: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+    comments: [{ type: Schema.Types.ObjectId, ref: 'Comment' }],
   },
   { timestamps: true }
 );

@@ -33,6 +33,7 @@ const PostEditPage = () => {
         setLoading(false);
       }
     };
+    
 
     fetchPost();
   }, [postId]);
@@ -53,17 +54,14 @@ const PostEditPage = () => {
     setLoading(true);
 
     try {
-      let imageUrl = '';
+      let imageUrl = formData.image ? '' : undefined;
 
       if (formData.image) {
         const uploadFormData = new FormData();
         uploadFormData.append('image', formData.image);
 
         const uploadResponse = await API.post('/upload', uploadFormData, {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-            Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
-          },
+          headers: { 'Content-Type': 'multipart/form-data' },
         });
 
         imageUrl = uploadResponse.data.imageUrl;
@@ -72,14 +70,10 @@ const PostEditPage = () => {
       const postPayload = {
         title: formData.title,
         content: formData.content,
-        imageUrl,
+        ...(imageUrl !== undefined && { imageUrl }),
       };
 
-      await API.put(`/posts/${postId}`, postPayload, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
-        },
-      });
+      await API.put(`/posts/${postId}`, postPayload);
 
       setMessage('게시글이 성공적으로 수정되었습니다.');
       setTimeout(() => navigate(`/posts/${postId}`), 1500);

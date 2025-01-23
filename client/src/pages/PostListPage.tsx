@@ -1,5 +1,6 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import API from '../utils/api';
 import { Link } from 'react-router-dom';
 
@@ -11,9 +12,20 @@ const PostListPage = () => {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'popular'>('all');
+  const [showScrollToTop, setShowScrollToTop] = useState(false);
 
-  const observer = useRef<IntersectionObserver | null>(null);
   const lastPostRef = useRef<HTMLLIElement | null>(null);
+
+  const observer = useMemo(() => {
+    return new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loading) {
+          setPage((prevPage) => prevPage + 1);
+        }
+      },
+      { threshold: 1.0 }
+    );
+  }, [hasMore, loading]);
 
   const fetchPosts = async (searchQuery = '', filterQuery = 'all', pageNumber = 1) => {
     setLoading(true);
@@ -41,23 +53,30 @@ const PostListPage = () => {
   }, [search, filter]);
 
   useEffect(() => {
-    if (observer.current) observer.current.disconnect();
-    observer.current = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMore && !loading) {
-          setPage((prevPage) => prevPage + 1);
-        }
-      },
-      { threshold: 1.0 }
-    );
-    if (lastPostRef.current) observer.current.observe(lastPostRef.current);
-  }, [hasMore, loading]);
-
-  useEffect(() => {
     if (page > 1) {
       fetchPosts(search, filter, page);
     }
   }, [page, search, filter]);
+
+  useEffect(() => {
+    if (observer && lastPostRef.current) {
+      observer.observe(lastPostRef.current);
+    }
+    return () => {
+      if (observer && lastPostRef.current) {
+        observer.unobserve(lastPostRef.current);
+      }
+    };
+  }, [observer, lastPostRef.current]);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollToTop(window.scrollY > 200);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const handleSearch = () => {
     setPage(1);
@@ -85,6 +104,21 @@ const PostListPage = () => {
           placeholder="검색어를 입력하세요"
           style={{ padding: '5px', marginRight: '10px' }}
         />
+        {search && (
+          <button
+            onClick={() => setSearch('')}
+            style={{
+              padding: '5px',
+              marginRight: '10px',
+              backgroundColor: '#f4f4f4',
+              color: '#333',
+              border: '1px solid #ccc',
+              cursor: 'pointer',
+            }}
+          >
+            초기화
+          </button>
+        )}
         <button onClick={handleSearch} style={{ padding: '5px', marginRight: '10px' }}>
           검색
         </button>
@@ -112,7 +146,19 @@ const PostListPage = () => {
           인기글
         </button>
       </div>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+      {error && (
+        <p
+          style={{
+            color: '#fff',
+            backgroundColor: '#d9534f',
+            padding: '10px',
+            borderRadius: '5px',
+            textAlign: 'center',
+          }}
+        >
+          {error}
+        </p>
+      )}
       <ul>
         {posts.map((post: any, index) => (
           <li
@@ -134,23 +180,39 @@ const PostListPage = () => {
           </li>
         ))}
       </ul>
-      {loading && <p>로딩 중...</p>}
-      <button
-        onClick={scrollToTop}
-        style={{
-          position: 'fixed',
-          bottom: '20px',
-          right: '20px',
-          padding: '10px 20px',
-          backgroundColor: '#007bff',
-          color: '#fff',
-          border: 'none',
-          borderRadius: '5px',
-          cursor: 'pointer',
-        }}
-      >
-        ▲
-      </button>
+      {loading && (
+        <div style={{ textAlign: 'center', margin: '20px 0' }}>
+          <div
+            className="spinner"
+            style={{
+              width: '40px',
+              height: '40px',
+              border: '4px solid #f4f4f4',
+              borderTop: '4px solid #007bff',
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite',
+            }}
+          ></div>
+        </div>
+      )}
+      {showScrollToTop && (
+        <button
+          onClick={scrollToTop}
+          style={{
+            position: 'fixed',
+            bottom: '20px',
+            right: '20px',
+            padding: '10px 20px',
+            backgroundColor: '#007bff',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '5px',
+            cursor: 'pointer',
+          }}
+        >
+          ▲
+        </button>
+      )}
     </div>
   );
 };
