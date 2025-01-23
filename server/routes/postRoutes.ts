@@ -42,9 +42,19 @@ router.post('/', authenticate, async (req: Request, res: Response) => {
 });
 
 router.get('/', async (req: Request, res: Response) => {
-  const { page = 1, limit = 10 } = req.query;
+  const { page = 1, limit = 10, search = '', filter = 'all' } = req.query;
 
   try {
+    const searchRegex = new RegExp(search as string, 'i');
+    const matchFilter =
+      filter === 'popular'
+        ? {
+            $expr: {
+              $gte: [{ $size: { $ifNull: ['$likes', []] } }, 10],
+            },
+          }
+        : {};
+
     const posts = await Post.aggregate([
       {
         $lookup: {
@@ -56,13 +66,23 @@ router.get('/', async (req: Request, res: Response) => {
       },
       {
         $addFields: {
-          commentsCount: { $size: { $ifNull: ['$comments', []] } }, 
-          likesCount: { $size: { $ifNull: ['$likes', []] } }, 
+          commentsCount: { $size: { $ifNull: ['$comments', []] } },
+          likesCount: { $size: { $ifNull: ['$likes', []] } },
+        },
+      },
+      {
+        $match: {
+          ...matchFilter,
+          $or: [
+            { title: searchRegex },
+            { content: searchRegex },
+            { 'user.username': searchRegex },
+          ],
         },
       },
       {
         $project: {
-          comments: 0, 
+          comments: 0,
         },
       },
     ])
@@ -70,7 +90,14 @@ router.get('/', async (req: Request, res: Response) => {
       .skip((+page - 1) * +limit)
       .limit(+limit);
 
-    const total = await Post.countDocuments();
+    const total = await Post.countDocuments({
+      ...matchFilter,
+      $or: [
+        { title: searchRegex },
+        { content: searchRegex },
+        { 'user.username': searchRegex },
+      ],
+    });
 
     res.status(200).json({ posts, total, page: +page, limit: +limit });
   } catch (error) {
