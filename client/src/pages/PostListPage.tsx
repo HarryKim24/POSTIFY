@@ -149,7 +149,7 @@ const PostListPage = () => {
           cursor: 'pointer',
         }}
       >
-        ▲ 최상단으로
+        ▲
       </button>
     </div>
   );
