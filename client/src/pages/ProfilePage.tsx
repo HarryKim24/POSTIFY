@@ -99,7 +99,11 @@ const ProfilePage = () => {
           <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
             {user.profileImage ? (
               <img
-                src={`${apiUrl}${user.profileImage}`}
+                src={
+                  user.profileImage?.startsWith('http')
+                    ? user.profileImage
+                    : `${apiUrl}${user.profileImage}`
+                }
                 alt="프로필 이미지"
                 style={{
                   maxWidth: '50px',

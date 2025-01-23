@@ -24,15 +24,16 @@ router.post('/', upload.single('image'), async (req, res) => {
     const existingImage = await Image.findOne({ hash });
     if (existingImage) {
       await fs.promises.unlink(filePath);
-      return res.status(200).json({ 
-        message: '이미 존재하는 이미지입니다.', 
+      return res.status(200).json({
+        message: '이미 존재하는 이미지입니다.',
         imageUrl: existingImage.url,
         existing: true,
       });
     }
 
+    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
     const newImage = new Image({
-      url: `${BASE_URL}/uploads/${req.file.filename}`,
+      url: `${baseUrl}/uploads/${req.file.filename}`,
       hash,
     });
     await newImage.save();
@@ -46,6 +47,7 @@ router.post('/', upload.single('image'), async (req, res) => {
     });
   }
 });
+
 
 router.post('/profile-image', authenticate, upload.single('image'), async (req, res) => {
   try {
