@@ -14,7 +14,7 @@ const app = express();
 
 app.use(
   cors({
-    origin: 'https://postify-livid.vercel.app/',
+    origin: 'https://postify-livid.vercel.app',
     credentials: true,
   })
 );
