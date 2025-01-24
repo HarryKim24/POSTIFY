@@ -52,6 +52,39 @@ router.post('/', authenticate, async (req: Request, res: Response) => {
   }
 });
 
+router.get('/', async (req: Request, res: Response) => {
+  const { page = 1, limit = 10 } = req.query;
+
+  try {
+    const posts = await Post.find()
+      .sort({ createdAt: -1 })
+      .skip((+page - 1) * +limit)
+      .limit(+limit);
+
+    res.status(200).json({ posts });
+  } catch (error: any) {
+    console.error('게시글 목록 에러:', error.message);
+    res.status(500).json({ error: '게시글 목록을 불러오는 중 문제가 발생했습니다.' });
+  }
+});
+
+router.get('/:postId', async (req: Request, res: Response) => {
+  const { postId } = req.params;
+
+  try {
+    const post = await Post.findById(postId).populate('user', 'username profileImage');
+
+    if (!post) {
+      return res.status(404).json({ error: '게시글을 찾을 수 없습니다.' });
+    }
+
+    res.status(200).json(post);
+  } catch (error: any) {
+    console.error('게시글 상세 조회 에러:', error.message);
+    res.status(500).json({ error: '게시글 상세 정보를 불러오는 중 문제가 발생했습니다.' });
+  }
+});
+
 router.put('/:postId', authenticate, async (req: Request, res: Response) => {
   const { postId } = req.params;
   const { title, content, imageUrl } = req.body;
