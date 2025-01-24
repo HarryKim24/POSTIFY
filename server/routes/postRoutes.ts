@@ -75,12 +75,20 @@ router.get('/', async (req: Request, res: Response) => {
       ],
     });
 
-    res.status(200).json({ posts, total, page: +page, limit: +limit });
+    res.status(200).json({
+      posts: posts.map((post) => ({
+        ...post.toObject(),
+        commentsCount: post.comments?.length || 0,
+      })),
+      total,
+      page: +page,
+      limit: +limit,
+      message: '게시글 목록 조회 성공',
+    });
   } catch (error) {
     console.error('게시글 목록 조회 에러:', error);
     res.status(500).json({
-      error: '서버 에러',
-      message: '게시글 목록을 불러오는 중 문제가 발생했습니다.',
+      error: '게시글 목록을 불러오는 중 문제가 발생했습니다.',
     });
   }
 });

@@ -33,16 +33,16 @@ const PostListPage = () => {
       const response = await API.get('/posts', {
         params: { search: searchQuery.trim(), filter: filterQuery, page: pageNumber },
       });
-
-      if (response.data && response.data.posts) {
+  
+      if (response.data && Array.isArray(response.data.posts)) {
         const newPosts = response.data.posts;
-
+  
         if (pageNumber === 1) {
           setPosts(newPosts);
         } else {
           setPosts((prevPosts) => [...prevPosts, ...newPosts]);
         }
-
+  
         setHasMore(newPosts.length > 0);
       } else {
         throw new Error('Unexpected API response format');
@@ -55,7 +55,7 @@ const PostListPage = () => {
       setLoading(false);
     }
   };
-
+  
   useEffect(() => {
     fetchPosts(search, filter, 1);
   }, [search, filter]);
@@ -121,14 +121,18 @@ const PostListPage = () => {
         <button onClick={() => handleFilterChange('popular')}>인기글</button>
       </div>
       <ul>
-        {posts.map((post, index) => (
-          <li ref={index === posts.length - 1 ? lastPostRef : null} key={post._id}>
-            <Link to={`/posts/${post._id}`}>
-              <h2>{post.title}</h2>
-              <p>{post.content}</p>
-            </Link>
-          </li>
-        ))}
+        {posts && posts.length > 0 ? (
+          posts.map((post, index) => (
+            <li ref={index === posts.length - 1 ? lastPostRef : null} key={post._id}>
+              <Link to={`/posts/${post._id}`}>
+                <h2>{post.title}</h2>
+                <p>{post.content}</p>
+              </Link>
+            </li>
+          ))
+        ) : (
+          !loading && <p>게시글이 없습니다.</p>
+        )}
       </ul>
       {loading && <p>로딩 중...</p>}
       {showScrollToTop && <button onClick={scrollToTop}>▲</button>}
