@@ -97,9 +97,9 @@ const PostDetailPage = () => {
 
       <h2>{post.title}</h2>
       <p>{post.content}</p>
-      {post.imageUrl && (
+      {post.imageUrl?.url && (
         <img
-          src={post.imageUrl.startsWith('http') ? post.imageUrl : `${import.meta.env.VITE_API_URL}${post.imageUrl}`}
+          src={post.imageUrl.url}
           alt="게시글 이미지"
           style={{ maxWidth: '300px', maxHeight: '300px', objectFit: 'cover' }}
         />

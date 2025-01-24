@@ -52,39 +52,41 @@ const PostEditPage = () => {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
-
+  
     try {
-      let imageUrl = formData.image ? '' : undefined;
-
+      let imageUrl: { url: string; public_id: string } | null | undefined = formData.image ? null : undefined;
+  
       if (formData.image) {
         const uploadFormData = new FormData();
         uploadFormData.append('image', formData.image);
-
+  
         const uploadResponse = await API.post('/upload', uploadFormData, {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
-
-        imageUrl = uploadResponse.data.imageUrl;
+  
+        const { url, public_id } = uploadResponse.data;
+        imageUrl = { url, public_id };
       }
-
+  
       const postPayload = {
         title: formData.title,
         content: formData.content,
         ...(imageUrl !== undefined && { imageUrl }),
       };
-
+  
       await API.put(`/posts/${postId}`, postPayload);
-
+  
       setMessage('게시글이 성공적으로 수정되었습니다.');
       setTimeout(() => navigate(`/posts/${postId}`), 1500);
     } catch (error: any) {
       const errorMessage = error.response?.data?.error || '게시글 수정에 실패했습니다.';
       setMessage(errorMessage);
-      console.error('게시글 수정 에러:', error);
     } finally {
       setLoading(false);
     }
   };
+  
+  
 
   return (
     <div>

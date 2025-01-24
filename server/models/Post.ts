@@ -3,7 +3,10 @@ import mongoose, { Schema, model, Document, Types } from 'mongoose';
 export interface IPost extends Document {
   title: string;
   content: string;
-  imageUrl?: string;
+  imageUrl?: {
+    url: string;
+    public_id: string;
+  } | null;
   user: Types.ObjectId;
   likes: Types.ObjectId[];
   dislikes: Types.ObjectId[];
@@ -26,7 +29,10 @@ const postSchema = new Schema<IPost>(
       maxlength: 1000, 
     },
     imageUrl: {
-      type: String,
+      type: {
+        url: { type: String, required: true },
+        public_id: { type: String, required: true },
+      },
       default: null,
     },
     user: {

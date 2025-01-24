@@ -55,36 +55,37 @@ const PostCreatePage = () => {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
-
+  
     try {
-      let imageUrl = '';
-
+      let imageUrl = null;
+  
       if (formData.image) {
         const uploadFormData = new FormData();
         uploadFormData.append('image', formData.image);
-
+  
         const uploadResponse = await API.post('/upload', uploadFormData, {
           headers: {
             'Content-Type': 'multipart/form-data',
             Authorization: `Bearer ${localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN)}`,
           },
         });
-
-        imageUrl = uploadResponse.data.imageUrl || '';
+  
+        const { url, public_id } = uploadResponse.data;
+        imageUrl = { url, public_id };
       }
-
+  
       const postPayload = {
         title: formData.title,
         content: formData.content,
         imageUrl,
       };
-
+  
       await API.post('/posts', postPayload, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN)}`,
         },
       });
-
+  
       setMessage('게시글이 성공적으로 작성되었습니다.');
       setFormData({ title: '', content: '', image: null });
       setTimeout(() => navigate('/'), 1500);
@@ -95,6 +96,7 @@ const PostCreatePage = () => {
       setLoading(false);
     }
   };
+  
 
   return (
     <div>
