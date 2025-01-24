@@ -5,7 +5,10 @@ export interface IUser extends Document {
   username: string;
   email: string;
   password: string;
-  profileImage?: string | null;
+  profileImage?: {
+    url: string;
+    public_id: string;
+  } | null;
 }
 
 const userSchema = new Schema<IUser>(
@@ -28,7 +31,10 @@ const userSchema = new Schema<IUser>(
       required: true,
     },
     profileImage: {
-      type: String,
+      type: {
+        url: { type: String, required: true },
+        public_id: { type: String, required: true },
+      },
       default: null,
     },
   },

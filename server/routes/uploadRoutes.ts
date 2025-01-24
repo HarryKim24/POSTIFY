@@ -1,15 +1,29 @@
 import { Router } from 'express';
-import { upload } from '../utils/upload';
+import { v2 as cloudinary } from 'cloudinary';
+import { CloudinaryStorage } from 'multer-storage-cloudinary';
+import multer from 'multer';
 import authenticate from '../middleware/authMiddleware';
-import crypto from 'crypto';
-import fs from 'fs';
-import path from 'path';
 import User from '../models/User';
-import Image from '../models/Image'; 
+import Image from '../models/Image';
 
 const router = Router();
 
-const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: async (req, file) => ({
+    folder: process.env.CLOUDINARY_UPLOAD_FOLDER || 'uploads',
+    allowed_formats: ['jpg', 'jpeg', 'png', 'gif'],
+    public_id: `${Date.now()}-${file.originalname}`,
+  }),
+});
+
+export const upload = multer({ storage });
 
 router.post('/', upload.single('image'), async (req, res) => {
   try {
@@ -17,33 +31,20 @@ router.post('/', upload.single('image'), async (req, res) => {
       return res.status(400).json({ error: '파일이 업로드되지 않았습니다.' });
     }
 
-    const filePath = path.resolve(req.file.path);
-    const fileBuffer = await fs.promises.readFile(filePath);
-    const hash = crypto.createHash('md5').update(fileBuffer).digest('hex');
+    const { path: imageUrl } = req.file;
 
-    const existingImage = await Image.findOne({ hash });
-    if (existingImage) {
-      await fs.promises.unlink(filePath);
-      return res.status(200).json({
-        message: '이미 존재하는 이미지입니다.',
-        imageUrl: existingImage.url,
-        existing: true,
-      });
-    }
-
-    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
     const newImage = new Image({
-      url: `${baseUrl}/uploads/${req.file.filename}`,
-      hash,
+      url: imageUrl,
+      hash: req.file.filename,
     });
     await newImage.save();
 
-    res.status(200).json({ message: '이미지 업로드 성공', imageUrl: newImage.url });
+    res.status(200).json({ message: '이미지 업로드 성공', imageUrl });
   } catch (error: any) {
     console.error('이미지 업로드 에러:', error.message);
     res.status(500).json({
       error: '서버 에러',
-      message: process.env.NODE_ENV === 'development' ? error.message : '문제가 발생했습니다.',
+      message: error.message || '이미지 업로드 중 문제가 발생했습니다.',
     });
   }
 });
@@ -57,24 +58,7 @@ router.post('/profile-image', authenticate, upload.single('image'), async (req, 
       return res.status(400).json({ error: '파일이 업로드되지 않았습니다.' });
     }
 
-    const filePath = path.resolve(req.file.path);
-    const fileBuffer = await fs.promises.readFile(filePath);
-    const hash = crypto.createHash('md5').update(fileBuffer).digest('hex');
-
-    const existingImage = await Image.findOne({ hash });
-    let imageUrl: string;
-
-    if (existingImage) {
-      await fs.promises.unlink(filePath);
-      imageUrl = existingImage.url;
-    } else {
-      const newImage = new Image({
-        url: `${BASE_URL}/uploads/${req.file.filename}`,
-        hash,
-      });
-      await newImage.save();
-      imageUrl = newImage.url;
-    }
+    const { path: imageUrl } = req.file;
 
     const user = await User.findById(userId);
     if (!user) {
@@ -87,7 +71,10 @@ router.post('/profile-image', authenticate, upload.single('image'), async (req, 
     res.status(200).json({ message: '프로필 이미지 업로드 성공', imageUrl });
   } catch (error: any) {
     console.error('프로필 이미지 업로드 에러:', error.message);
-    res.status(500).json({ error: '서버 에러', message: error.message });
+    res.status(500).json({
+      error: '서버 에러',
+      message: error.message || '이미지 업로드 중 문제가 발생했습니다.',
+    });
   }
 });
 

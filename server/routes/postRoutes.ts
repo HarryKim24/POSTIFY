@@ -1,10 +1,17 @@
 import mongoose from 'mongoose';
 import { Router, Request, Response } from 'express';
+import { v2 as cloudinary } from 'cloudinary';
 import Post, { IPost } from '../models/Post';
 import Comment from '../models/Comment';
 import authenticate, { AuthRequest } from '../middleware/authMiddleware';
 
 const router = Router();
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 router.post('/', authenticate, async (req: Request, res: Response) => {
   try {
@@ -19,6 +26,10 @@ router.post('/', authenticate, async (req: Request, res: Response) => {
     }
     if (content.length > 1000) {
       return res.status(400).json({ error: '내용은 1000자 이내로 입력해주세요.' });
+    }
+
+    if (imageUrl && (!imageUrl.url || !imageUrl.public_id)) {
+      return res.status(400).json({ error: '유효하지 않은 이미지 정보입니다.' });
     }
 
     const newPost: IPost = new Post({
@@ -36,89 +47,10 @@ router.post('/', authenticate, async (req: Request, res: Response) => {
     console.error('포스트 작성 에러:', error);
     res.status(500).json({
       error: '서버 에러',
-      message: process.env.NODE_ENV === 'development' ? error.message : '문제가 발생했습니다. 다시 시도해주세요.',
+      message: error.message || '문제가 발생했습니다. 다시 시도해주세요.',
     });
   }
 });
-
-router.get('/', async (req: Request, res: Response) => {
-  const { page = 1, limit = 5, search = '', filter = 'all' } = req.query;
-
-  try {
-    const searchRegex = new RegExp(search as string, 'i');
-    const matchFilter =
-      filter === 'popular'
-        ? {
-            $expr: {
-              $gte: [{ $size: { $ifNull: ['$likes', []] } }, 10],
-            },
-          }
-        : {};
-
-    const posts = await Post.find({
-      ...matchFilter,
-      $or: [
-        { title: searchRegex },
-        { content: searchRegex },
-      ],
-    })
-      .populate('user', 'username profileImage')
-      .sort({ createdAt: -1 })
-      .skip((+page - 1) * +limit)
-      .limit(+limit);
-
-    const total = await Post.countDocuments({
-      ...matchFilter,
-      $or: [
-        { title: searchRegex },
-        { content: searchRegex },
-      ],
-    });
-
-    res.status(200).json({
-      posts: posts.map((post) => ({
-        ...post.toObject(),
-        commentsCount: post.comments?.length || 0,
-      })),
-      total,
-      page: +page,
-      limit: +limit,
-      message: '게시글 목록 조회 성공',
-    });
-  } catch (error) {
-    console.error('게시글 목록 조회 에러:', error);
-    res.status(500).json({
-      error: '게시글 목록을 불러오는 중 문제가 발생했습니다.',
-    });
-  }
-});
-
-
-router.get('/:postId', async (req: Request, res: Response) => {
-  const { postId } = req.params;
-
-  try {
-    const post = await Post.findById(postId)
-      .populate('user', 'username profileImage')
-      .populate({
-        path: 'comments',
-        populate: { path: 'user', select: 'username profileImage' }, 
-      });
-
-    if (!post) {
-      return res.status(404).json({ error: '게시글을 찾을 수 없습니다.' });
-    }
-
-    res.status(200).json(post);
-  } catch (error) {
-    console.error('게시글 상세 조회 에러:', error);
-    res.status(500).json({
-      error: '서버 에러',
-      message: '게시글을 불러오는 중 문제가 발생했습니다.',
-    });
-  }
-});
-
 
 router.put('/:postId', authenticate, async (req: Request, res: Response) => {
   const { postId } = req.params;
@@ -138,7 +70,18 @@ router.put('/:postId', authenticate, async (req: Request, res: Response) => {
 
     if (title) post.title = title;
     if (content) post.content = content;
-    if (imageUrl) post.imageUrl = imageUrl;
+
+    if (imageUrl) {
+      if (!imageUrl.url || !imageUrl.public_id) {
+        return res.status(400).json({ error: '유효하지 않은 이미지 정보입니다.' });
+      }
+
+      if (post.imageUrl && post.imageUrl.public_id) {
+        await cloudinary.uploader.destroy(post.imageUrl.public_id);
+      }
+
+      post.imageUrl = imageUrl;
+    }
 
     await post.save();
 
@@ -148,11 +91,10 @@ router.put('/:postId', authenticate, async (req: Request, res: Response) => {
 
     res.status(500).json({
       error: '서버 에러',
-      message: process.env.NODE_ENV === 'development' ? error.message : '문제가 발생했습니다. 다시 시도해주세요.',
+      message: error.message || '문제가 발생했습니다. 다시 시도해주세요.',
     });
   }
 });
-
 
 router.delete('/:postId', authenticate, async (req: Request, res: Response) => {
   const { postId } = req.params;
@@ -169,22 +111,20 @@ router.delete('/:postId', authenticate, async (req: Request, res: Response) => {
       return res.status(403).json({ error: '게시글을 삭제할 권한이 없습니다.' });
     }
 
-    await Comment.deleteMany({ post: postId });
+    if (post.imageUrl && post.imageUrl.public_id) {
+      await cloudinary.uploader.destroy(post.imageUrl.public_id);
+    }
 
+    await Comment.deleteMany({ post: postId });
     await Post.findByIdAndDelete(postId);
 
     res.status(200).json({ message: '게시글과 관련된 댓글들이 모두 삭제되었습니다.' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('게시글 삭제 에러:', error);
-
-    const errorMessage =
-      error instanceof Error
-        ? error.message
-        : '문제가 발생했습니다. 다시 시도해주세요.';
 
     res.status(500).json({
       error: '서버 에러',
-      message: process.env.NODE_ENV === 'development' ? errorMessage : '문제가 발생했습니다. 다시 시도해주세요.',
+      message: error.message || '문제가 발생했습니다. 다시 시도해주세요.',
     });
   }
 });
@@ -213,7 +153,6 @@ router.put('/:postId/like', authenticate, async (req: AuthRequest, res: Response
     res.status(500).json({ error: '서버 에러가 발생했습니다.' });
   }
 });
-
 
 router.put('/:postId/dislike', authenticate, async (req: AuthRequest, res: Response) => {
   try {
