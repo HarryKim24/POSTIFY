@@ -58,7 +58,10 @@ router.post('/profile-image', authenticate, upload.single('image'), async (req, 
       return res.status(400).json({ error: '파일이 업로드되지 않았습니다.' });
     }
 
-    const { path: imageUrl } = req.file;
+    const imageUrl = {
+      url: req.file.path, 
+      public_id: req.file.filename, 
+    };
 
     const user = await User.findById(userId);
     if (!user) {
@@ -77,5 +80,6 @@ router.post('/profile-image', authenticate, upload.single('image'), async (req, 
     });
   }
 });
+
 
 export default router;
