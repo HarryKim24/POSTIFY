@@ -52,39 +52,6 @@ router.post('/', authenticate, async (req: Request, res: Response) => {
   }
 });
 
-router.get('/', async (req: Request, res: Response) => {
-  const { page = 1, limit = 10 } = req.query;
-
-  try {
-    const posts = await Post.find()
-      .sort({ createdAt: -1 })
-      .skip((+page - 1) * +limit)
-      .limit(+limit);
-
-    res.status(200).json({ posts });
-  } catch (error: any) {
-    console.error('게시글 목록 에러:', error.message);
-    res.status(500).json({ error: '게시글 목록을 불러오는 중 문제가 발생했습니다.' });
-  }
-});
-
-router.get('/:postId', async (req: Request, res: Response) => {
-  const { postId } = req.params;
-
-  try {
-    const post = await Post.findById(postId).populate('user', 'username profileImage');
-
-    if (!post) {
-      return res.status(404).json({ error: '게시글을 찾을 수 없습니다.' });
-    }
-
-    res.status(200).json(post);
-  } catch (error: any) {
-    console.error('게시글 상세 조회 에러:', error.message);
-    res.status(500).json({ error: '게시글 상세 정보를 불러오는 중 문제가 발생했습니다.' });
-  }
-});
-
 router.put('/:postId', authenticate, async (req: Request, res: Response) => {
   const { postId } = req.params;
   const { title, content, imageUrl } = req.body;
@@ -159,56 +126,6 @@ router.delete('/:postId', authenticate, async (req: Request, res: Response) => {
       error: '서버 에러',
       message: error.message || '문제가 발생했습니다. 다시 시도해주세요.',
     });
-  }
-});
-
-router.put('/:postId/like', authenticate, async (req: AuthRequest, res: Response) => {
-  try {
-    const { postId } = req.params;
-    const userId = new mongoose.Types.ObjectId(req.userId);
-
-    const post = await Post.findById(postId);
-    if (!post) {
-      return res.status(404).json({ error: '게시글을 찾을 수 없습니다.' });
-    }
-
-    if (post.likes.some((id) => id.equals(userId))) {
-      post.likes = post.likes.filter((id) => !id.equals(userId));
-    } else {
-      post.likes.push(userId);
-      post.dislikes = post.dislikes.filter((id) => !id.equals(userId));
-    }
-
-    await post.save();
-    res.status(200).json({ message: '좋아요 업데이트 성공', likes: post.likes, dislikes: post.dislikes });
-  } catch (error) {
-    console.error('좋아요 업데이트 에러:', error);
-    res.status(500).json({ error: '서버 에러가 발생했습니다.' });
-  }
-});
-
-router.put('/:postId/dislike', authenticate, async (req: AuthRequest, res: Response) => {
-  try {
-    const { postId } = req.params;
-    const userId = new mongoose.Types.ObjectId(req.userId);
-
-    const post = await Post.findById(postId);
-    if (!post) {
-      return res.status(404).json({ error: '게시글을 찾을 수 없습니다.' });
-    }
-
-    if (post.dislikes.some((id) => id.equals(userId))) {
-      post.dislikes = post.dislikes.filter((id) => !id.equals(userId));
-    } else {
-      post.dislikes.push(userId);
-      post.likes = post.likes.filter((id) => !id.equals(userId));
-    }
-
-    await post.save();
-    res.status(200).json({ message: '싫어요 업데이트 성공', likes: post.likes, dislikes: post.dislikes });
-  } catch (error) {
-    console.error('싫어요 업데이트 에러:', error);
-    res.status(500).json({ error: '서버 에러가 발생했습니다.' });
   }
 });
 
