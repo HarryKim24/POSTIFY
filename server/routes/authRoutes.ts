@@ -62,7 +62,7 @@ router.put('/me/remove-profile-image', authenticate, async (req, res) => {
       return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
     }
 
-    if (user.profileImage && user.profileImage.public_id) {
+    if (user.profileImage?.public_id) {
       await cloudinary.uploader.destroy(user.profileImage.public_id);
     }
 
@@ -71,18 +71,13 @@ router.put('/me/remove-profile-image', authenticate, async (req, res) => {
 
     res.status(200).json({
       message: '프로필 이미지가 성공적으로 삭제되었습니다.',
-      user: {
-        id: user._id,
-        username: user.username,
-        email: user.email,
-        profileImage: user.profileImage,
-      },
+      profileImage: user.profileImage,
     });
   } catch (error: any) {
     console.error('프로필 이미지 삭제 에러:', error.message);
     res.status(500).json({
       error: '서버 에러',
-      message: error.message || '문제가 발생했습니다.',
+      message: error.message || '이미지 삭제 중 문제가 발생했습니다.',
     });
   }
 });

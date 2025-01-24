@@ -59,8 +59,8 @@ router.post('/profile-image', authenticate, upload.single('image'), async (req, 
     }
 
     const imageUrl = {
-      url: req.file.path, 
-      public_id: req.file.filename, 
+      url: req.file.path,
+      public_id: req.file.filename,
     };
 
     const user = await User.findById(userId);
@@ -68,10 +68,14 @@ router.post('/profile-image', authenticate, upload.single('image'), async (req, 
       return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
     }
 
+    if (user.profileImage?.public_id) {
+      await cloudinary.uploader.destroy(user.profileImage.public_id);
+    }
+
     user.profileImage = imageUrl;
     await user.save();
 
-    res.status(200).json({ message: '프로필 이미지 업로드 성공', imageUrl });
+    res.status(200).json({ message: '프로필 이미지 업로드 성공', profileImage: user.profileImage });
   } catch (error: any) {
     console.error('프로필 이미지 업로드 에러:', error.message);
     res.status(500).json({
